@@ -9,67 +9,50 @@ import CustomHeader from '../components/CustomHeader';
 //import Title from '../components/Ghs_Comps/Title'
 
 
-export default class UserScreen extends Component {
+export default class JoinGameScreen extends Component {
   static navigationOptions = {
-    title: 'Login', // Possibly have it dynamic to name
+    title: 'Join Game', // Possibly have it dynamic to name
   };
     state = {
       loading: false,
-      username: '',
-      usernameError: '',
-      pass: '',
-      passError: '',
       key: '',
       keyError:''
     }
 
-    editUsername = username => {
-      this.setState({ username });
-    };
-    editPassword = pass => {
-      this.setState({ pass });
-    };
+    
     editGamekey = key => {
       this.setState({ key });
     };
     componentDidMount(){
-        console.log("Mount")
+        //console.log("Mount")
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
     } 
     
-    loginPressed = () => {
+    joinPressed = () => {
       var error = false;
-      console.log("Pressed login");
+      console.log("Joining Game");
       console.log(this.state);
-      if (this.state.username == '') {// Also run through alphanumeric validator
-        console.log("Empty usname");
-        this.setState({usernameError: "Must Input Username"});
-        error =true;
-      }
-      if (this.state.pass == '') {// Also run through alphanumeric validator
-        console.log("Empty Password");
-        this.setState({passError: "Must Input Password"});
-        error = true
-      } 
 
       if (this.state.key == '') {
         console.log( "Empty key");
         this.setState({key: ''})
+        this.requestGames()
+      } else{
+        this.requestJoin()
       }
       if (error = true){
         return // Breaks out of sending data
       } else{
-        this.sendRequest()
+       console.log("ERRR?")
       }
     };
   
-      sendRequest(sValue) {
+      requestGames() {
         this.setState({loading: true})
-        const username = this.state.username;
-        const password = this.state.pass;
-        const key =this.state.key;
-        var getURL = "Https://tuschedulealerts.com/player/"+username+'/'+password
+        var getURL = "Https://tuschedulealerts.com/game"
+        console.log("Sending request to ",getURL)
+
         fetch(getURL,{ 
           method: 'GET',
           headers: {
@@ -82,6 +65,24 @@ export default class UserScreen extends Component {
         .catch((error) => {console.log("OOF:"); console.error(error);});
       }
     
+      requestJoin(){
+        this.setState({loading: true})
+        const key =this.state.key;
+        var getURL = "Https://tuschedulealerts.com/game/code/"+key
+        console.log("Sending request to ",getURL)
+        fetch(getURL,{ 
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(this.handleResponse)
+        .then(this.parseResponse)
+        .catch((error) => {console.log("OOF:"); console.error(error);});
+      }
+    
+
       handleResponse = response => {
         this.setState({loading: false})
         if (response.ok){
@@ -125,6 +126,15 @@ export default class UserScreen extends Component {
           var data = JSON.parse(data)            
         }
       }
+
+      getGameStatus = () => {
+        console.log("Getting game status",this.state)
+        if (this.state.key == "") {
+          return "View Games"
+        } else{
+          return "Join Game"
+        }
+      }
       renderSpinner = () => {
         if (this.state.loading == true){
           return(
@@ -142,26 +152,8 @@ export default class UserScreen extends Component {
       render() {
         return(
           <ThemeProvider theme={LaserTheme}>
-            <CustomHeader headerText = "Login" />
+           <CustomHeader {...this.props} headerText= "Join Game" />
             <Container>
-            <Input
-              autoCompleteType = 'username'
-              placeholder='Username'
-              returnKeyType='done'
-              leftIcon={{ type: 'font-awesome', name: 'user' }}
-              errorMessage= {this.state.usernameError}
-              onChangeText={this.editUsername}
-            />
-            <Input
-              autoCompleteType = 'password'
-              secureTextEntry = {true}
-              password={true}
-              placeholder='Password'
-              returnKeyType='done'
-              leftIcon={{ type: 'font-awesome', name: 'lock' }}
-              errorMessage= {this.state.passError}
-              onChangeText={this.editPassword}
-            />
             <Input
               placeholder='Game Key (optional)'
               keyboardType='number-pad'
@@ -171,8 +163,8 @@ export default class UserScreen extends Component {
               onChangeText={this.editGamekey}
             />
             <Button 
-              title= 'Login'
-              onPress={() => this.loginPressed()}
+              title= {this.getGameStatus()}
+              onPress={() => this.joinPressed()}
               />
              </Container>
           </ThemeProvider>

@@ -3,17 +3,17 @@ import {Text} from 'react-native';
 import ButtonMenu from '../components/Button_menu'
 //import Icon from 'react-native-vector-icons/AntDesign';
 import { Dimensions, ActivityIndicator } from 'react-native';
-import Title from '../components/Title';
-import { Container, Header, Content, Footer, FooterTab, Button, Body} from 'native-base';
+import { Container, Content, Footer, FooterTab, Button, Body} from 'native-base';
 import CustomHeader from '../components/CustomHeader';
+import { ThemeProvider } from 'react-native-elements';
 //import LaserTheme from '../components/Custom_theme'
 export default class HomeScreen extends Component {
   static navigationOptions = {
     title: 'Home', // Possibly have it dynamic to name
   };
  state = {
-  menuOptions: ["Gun Communication","Log In", "Server Communication"],
-  menuTranslater: [{text:"Gun Communication",value: "Gun"}, {text:'Log In', value: "User"},{text:'Server Communication', value: "Server"}]
+  menuOptions: ["Gun Communication","Join Game", "Server Communication"],
+  menuTranslater: [{text:"Gun Communication",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Server Communication', value: "Server"}]
  }
 
  onMenuPress = (menuVal) => {
@@ -32,8 +32,8 @@ export default class HomeScreen extends Component {
     //const imageHeight = Math.round(dimensions.width * 0.20);
     const imageWidth = dimensions.width;
     return (
-      <Container>
-         <CustomHeader headerText= "Home" />
+      <ThemeProvider>
+       <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
                  
         <Content>
         <ButtonMenu 
@@ -48,7 +48,7 @@ export default class HomeScreen extends Component {
             </Button>
           </FooterTab>
         </Footer>
-        </Container>
+        </ThemeProvider>
       )
   }
 }

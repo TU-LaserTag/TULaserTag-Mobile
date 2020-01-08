@@ -2,19 +2,17 @@ import React, { Component } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import {Icon } from 'react-native-elements';
 
-export default class HomeIcon extends Component {
+export default class SignupIcon extends Component {
   onPress = () => {
     this.props.onPress();
   }
  
   render() {
-    const {children} = this.props
-
     return (
       <Icon
       //reverse
-      name='home'
-      type='FontAwesome'
+      name='user-plus'
+      type='feather'
       color='white'
       onPress={() => this.onPress()}
     />

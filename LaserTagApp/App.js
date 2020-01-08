@@ -8,16 +8,18 @@ import { Ionicons } from '@expo/vector-icons';
 //Screens --
 import HomeScreen from './screens/HomeScreen'
 import GunScreen from './screens/GunScreen'
-import UserScreen from './screens/UserScreen'
 import LoginScreen from './screens/LoginScreen'
 import ServerScreen from './screens/ServerScreen'
+import JoinGameScreen from './screens/JoinGameScreen';
+import SignupScreen from './screens/SignupScreen';
 
 // Screen setup
 const RootStack = createStackNavigator(
   {
     Login: LoginScreen,
+    Signup: SignupScreen,
     Home: HomeScreen,
-    User: UserScreen,
+    Join: JoinGameScreen,
     Server: ServerScreen,
     Gun: GunScreen    
   },

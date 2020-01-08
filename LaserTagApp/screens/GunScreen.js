@@ -7,7 +7,7 @@ import {
   Switch
 } from 'native-base';
 
-import BluetoothManager from '../components/Ble_manager'
+//import BluetoothManager from '../components/Ble_manager'
 
 //import BluetoothSerial from 'react-native-bluetooth-serial'
 //import "../components/Blue_tooth"

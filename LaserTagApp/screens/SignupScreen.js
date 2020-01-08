@@ -10,12 +10,11 @@ import { Container, Content, Spinner, Body,Left, Right } from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 import HomeScreen from './HomeScreen';
 import Title from '../components/Title'
-import HomeIcon from '../components/Home_Icon';
 
 
-export default class LoginScreen extends Component {
+export default class SignupScreen extends Component {
   static navigationOptions = {
-    title: 'Login', // Possibly have it dynamic to name
+    title: 'Sign up', // Possibly have it dynamic to name
   };
     state = {
       loading: false,
@@ -23,6 +22,8 @@ export default class LoginScreen extends Component {
       usernameError: '',
       pass: '',
       passError: '',
+      confirmPass: '',
+      conFirmPassError: ''
     }
 
     editUsername = username => {
@@ -31,18 +32,17 @@ export default class LoginScreen extends Component {
     editPassword = pass => {
       this.setState({ pass });
     };
-    editGamekey = key => {
-      this.setState({ key });
+    editConfirmPass = key => {
+      this.setState({ confirmPass });
     };
     componentDidMount(){
-        console.log("Mount")
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
     } 
     
-    loginPressed = () => {
+    signupPressed = () => {
       var error = false;
-      console.log("Pressed login");
+      console.log("Pressed Signup");
       console.log(this.state);
       if (this.state.username == '') {// Also run through alphanumeric validator
         console.log("Empty usname");
@@ -54,12 +54,21 @@ export default class LoginScreen extends Component {
         this.setState({passError: "Must Input Password"});
         //error = true
       } 
+      if (this.state.conFirmPassError == '') {// Also run through alphanumeric validator
+        console.log("Empty Password");
+        this.setState({conFirmPassError: "Must Confirm Password"});
+        //error = true
+      } else if (this.state.confirmPass != this.state.pass){
+        console.log("Unmatching password")
+        this.setState({conFirmPassError: "Passwords Do not match"});
+
+      }
 
      
       if (error == true){
         return // Breaks out of sending data
       } else{
-        //this.sendRequest()
+        this.sendRequest()
         this.props.navigation.navigate("Home");
       }
     };
@@ -68,14 +77,17 @@ export default class LoginScreen extends Component {
         this.setState({loading: true})
         const username = this.state.username;
         const password = this.state.pass;
-        const key =this.state.key;
-        var getURL = "Https://tuschedulealerts.com/player/"+username+'/'+password
+        var getURL = "Https://tuschedulealerts.com/player/"
         fetch(getURL,{ 
-          method: 'GET',
+          method: 'POST',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-          }
+          },
+          body: JSON.stringify({
+            username: username,
+            password: password 
+          })
         })
         .then(this.handleResponse)
         .then(this.parseResponse)
@@ -142,10 +154,10 @@ export default class LoginScreen extends Component {
       render() {
         return(
           <ThemeProvider theme={LaserTheme}>
-           <CustomHeader {...this.props} headerText= "Login" headerType = "login" />
+           <CustomHeader {...this.props} headerType = 'signup' headerText= "Sign Up" />
             <Container>
             <Input
-              autoCompleteType = 'username'
+              //autoCompleteType = 'username'
               placeholder='Username'
               returnKeyType='done'
               leftIcon={{ type: 'font-awesome', name: 'user' }}
@@ -153,7 +165,7 @@ export default class LoginScreen extends Component {
               onChangeText={this.editUsername}
             />
             <Input
-              autoCompleteType = 'password'
+              //autoCompleteType = 'password'
               secureTextEntry = {true}
               password={true}
               placeholder='Password'
@@ -162,9 +174,19 @@ export default class LoginScreen extends Component {
               errorMessage= {this.state.passError}
               onChangeText={this.editPassword}
             />
+            <Input
+              //autoCompleteType = 'password'
+              secureTextEntry = {true}
+              password={true}
+              placeholder='Confirm Password'
+              returnKeyType='done'
+              leftIcon={{ type: 'font-awesome', name: 'lock' }}
+              errorMessage= {this.state.conFirmPassError}
+              onChangeText={this.editConfirmPass}
+            />
             <Button 
-              title= 'Login'
-              onPress={() => this.loginPressed()}
+              title= 'Sign Up'
+              onPress={() => this.signupPressed()}
               />
              </Container>
           </ThemeProvider>
