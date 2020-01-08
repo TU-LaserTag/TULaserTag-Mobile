@@ -4,7 +4,6 @@ import ButtonMenu from '../components/Button_menu'
 //import Icon from 'react-native-vector-icons/AntDesign';
 import { Dimensions, ActivityIndicator } from 'react-native';
 import Title from '../components/Title';
-
 import { Container, Header, Content, Footer, FooterTab, Button, Left, Right, Body } from 'native-base';
 
 export default class HomeScreen extends Component {
