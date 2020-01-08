@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import {StyleSheet,View} from 'react-native';
 import { Title, Icon, Subtitle,Container, Header, Spinner, Body, Left, Right, Button } from 'native-base';
 //import Title from '../components/Ghs_Comps/Title'
-
+import HomeIcon from '../components/Home_Icon'
 
 export default class ServerScreen extends Component {
   static navigationOptions = {
@@ -113,8 +113,8 @@ export default class ServerScreen extends Component {
                   <Subtitle style={styles.cas}>{this.state.chemCas}</Subtitle>
                 </Body>
                 <Right style={{flex:0.3}}>
-                  <Button  transparent>
-                  <Icon name='menu' />
+                  <Button  transparent onPress={() => console.log(this.props)}>
+                  <HomeIcon onPress = {() =>console.log(this.props)}></HomeIcon>
                   </Button>
                 </Right>
               </Header>

@@ -5,8 +5,12 @@ import ButtonMenu from '../components/Button_menu'
 import { Dimensions, ActivityIndicator } from 'react-native';
 import Title from '../components/Title';
 import { Container, Header, Content, Footer, FooterTab, Button, Body} from 'native-base';
+import CustomHeader from '../components/CustomHeader';
 //import LaserTheme from '../components/Custom_theme'
 export default class HomeScreen extends Component {
+  static navigationOptions = {
+    title: 'Home', // Possibly have it dynamic to name
+  };
  state = {
   menuOptions: ["Gun Communication","Log In", "Server Communication"],
   menuTranslater: [{text:"Gun Communication",value: "Gun"}, {text:'Log In', value: "User"},{text:'Server Communication', value: "Server"}]
@@ -29,12 +33,8 @@ export default class HomeScreen extends Component {
     const imageWidth = dimensions.width;
     return (
       <Container>
-         <Header>
-          <Body>
-            <Title>Home</Title>
-          </Body>
-        </Header>
-         
+         <CustomHeader headerText= "Home" />
+                 
         <Content>
         <ButtonMenu 
               menuOptions = {menuOptions}

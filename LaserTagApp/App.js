@@ -9,18 +9,20 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from './screens/HomeScreen'
 import GunScreen from './screens/GunScreen'
 import UserScreen from './screens/UserScreen'
+import LoginScreen from './screens/LoginScreen'
 import ServerScreen from './screens/ServerScreen'
 
 // Screen setup
 const RootStack = createStackNavigator(
   {
+    Login: LoginScreen,
     Home: HomeScreen,
     User: UserScreen,
     Server: ServerScreen,
     Gun: GunScreen    
   },
   {
-    initialRouteName: "Home",
+    initialRouteName: "Login",
     headerMode: 'none',
     navigationOptions: {
           headerVisible: true,

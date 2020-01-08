@@ -15,7 +15,7 @@ export const LaserTheme = {
         backgroundColor: 'black'
     },
     Header:{
-        backgroundColor:'black'
+        backgroundColor:'grey'
     },
     Input:{
         errorStyle:{
