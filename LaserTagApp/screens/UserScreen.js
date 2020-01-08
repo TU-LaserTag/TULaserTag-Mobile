@@ -1,6 +1,11 @@
 import React, { Component } from 'react';
 import {StyleSheet,View} from 'react-native';
-import { Title, Icon, Subtitle,Container, Header, Spinner, Body, Left, Right, Button } from 'native-base';
+import Icon from 'react-native-vector-icons/FontAwesome5';
+import { Button, ThemeProvider, Input } from 'react-native-elements';
+import { LaserTheme } from '../components/Custom_theme';
+import { Container } from 'native-base';
+import CustomHeader from '../components/CustomHeader';
+
 //import Title from '../components/Ghs_Comps/Title'
 
 
@@ -10,26 +15,67 @@ export default class UserScreen extends Component {
   };
     state = {
       loading: false,
-      
+      username: '',
+      usernameError: '',
+      pass: '',
+      passError: '',
+      key: '',
+      keyError:''
     }
-  
+
+    editUsername = username => {
+      this.setState({ username });
+    };
+    editPassword = pass => {
+      this.setState({ pass });
+    };
+    editGamekey = key => {
+      this.setState({ key });
+    };
     componentDidMount(){
         console.log("Mount")
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
+    } 
+    
+    loginPressed = () => {
+      var error = false;
+      console.log("Pressed login");
+      console.log(this.state);
+      if (this.state.username == '') {// Also run through alphanumeric validator
+        console.log("Empty usname");
+        this.setState({usernameError: "Must Input Username"});
+        error =true;
+      }
+      if (this.state.pass == '') {// Also run through alphanumeric validator
+        console.log("Empty Password");
+        this.setState({passError: "Must Input Password"});
+        error = true
       } 
+
+      if (this.state.key == '') {
+        console.log( "Empty key");
+        this.setState({key: ''})
+      }
+      if (error = true){
+        return // Breaks out of sending data
+      } else{
+        this.sendRequest()
+      }
+    };
   
       sendRequest(sValue) {
         this.setState({loading: true})
-        fetch('basicAPIRewuesturl',{ 
-          method: 'POST',
+        const username = this.state.username;
+        const password = this.state.pass;
+        const key =this.state.key;
+        var getURL = "Https://tuschedulealerts.com/player/"+username+'/'+password
+        fetch(getURL,{ 
+          method: 'GET',
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputValue: sValue, 
-          })
+          }
         })
         .then(this.handleResponse)
         .then(this.parseResponse)
@@ -94,33 +140,42 @@ export default class UserScreen extends Component {
         }
       }
       render() {
-        var chemName = this.state.chemName
-        var chemCas = this.state.chemCas
-        console.log('CHEMNAME:', chemName)   
-          return (
-              <Container style = {{backgroundColor: 'transparent'}}>
-                <Header>
-                <Left style={{flex:0.3}}>
-                  <View style = {{flexDirection: 'row'}}>
-                  <Button transparent  onPress={() => this.props.navigation.goBack()}>
-                  <Icon name='arrow-back' />
-                  </Button>
-                 {this.renderSpinner()}
-              </View>
-                 </Left>
-                <Body>
-                  <Title style={styles.title}>{this.state.chemName}</Title>
-                  <Subtitle style={styles.cas}>{this.state.chemCas}</Subtitle>
-                </Body>
-                <Right style={{flex:0.3}}>
-                  <Button  transparent>
-                  <Icon name='menu' />
-                  </Button>
-                </Right>
-              </Header>
-              
-      
-              </Container>
+        return(
+          <ThemeProvider theme={LaserTheme}>
+            <CustomHeader headerText = "Login" />
+            <Container>
+            <Input
+              autoCompleteType = 'username'
+              placeholder='Username'
+              returnKeyType='done'
+              leftIcon={{ type: 'font-awesome', name: 'user' }}
+              errorMessage= {this.state.usernameError}
+              onChangeText={this.editUsername}
+            />
+            <Input
+              autoCompleteType = 'password'
+              secureTextEntry = {true}
+              password={true}
+              placeholder='Password'
+              returnKeyType='done'
+              leftIcon={{ type: 'font-awesome', name: 'lock' }}
+              errorMessage= {this.state.passError}
+              onChangeText={this.editPassword}
+            />
+            <Input
+              placeholder='Game Key (optional)'
+              keyboardType='number-pad'
+              returnKeyType='done'
+              leftIcon={{ type: 'entypo', name: 'key' }}
+              errorMessage= {this.state.keyError}
+              onChangeText={this.editGamekey}
+            />
+            <Button 
+              title= 'Login'
+              onPress={() => this.loginPressed()}
+              />
+             </Container>
+          </ThemeProvider>
           );
         }
       }

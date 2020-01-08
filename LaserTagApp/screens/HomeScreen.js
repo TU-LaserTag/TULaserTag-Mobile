@@ -4,8 +4,8 @@ import ButtonMenu from '../components/Button_menu'
 //import Icon from 'react-native-vector-icons/AntDesign';
 import { Dimensions, ActivityIndicator } from 'react-native';
 import Title from '../components/Title';
-import { Container, Header, Content, Footer, FooterTab, Button, Left, Right, Body } from 'native-base';
-
+import { Container, Header, Content, Footer, FooterTab, Button, Body} from 'native-base';
+//import LaserTheme from '../components/Custom_theme'
 export default class HomeScreen extends Component {
  state = {
   menuOptions: ["Gun Communication","Log In", "Server Communication"],
@@ -17,8 +17,8 @@ export default class HomeScreen extends Component {
   let optDic = menuTranslater[menuVal]
   let optText = optDic.text
   let optVal =  optDic.value
-  console.log(optDic, optText, optVal)
-  alert("pressed "+optText)
+  //console.log(optDic, optText, optVal)
+  //alert("pressed "+optText)
   this.props.navigation.navigate(optVal)
 }
 
@@ -49,7 +49,6 @@ export default class HomeScreen extends Component {
           </FooterTab>
         </Footer>
         </Container>
-
       )
   }
 }
