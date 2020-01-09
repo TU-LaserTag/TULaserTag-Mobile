@@ -28,6 +28,9 @@
     },
     "assetBundlePatterns": [
       "**/*"
-    ]
-  }
+    ],
+    "entryPoint": "node_modules/expo/AppEntry.js"
+  },
+  "displayName": "TU Laser Tag",
+  "name": "tuLasertag"
 }
