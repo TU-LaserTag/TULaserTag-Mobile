@@ -29,6 +29,8 @@ target 'tuLasertag' do
   pod 'React-jsi', :path => "#{rnPrefix}/ReactCommon/jsi"
   pod 'React-jsiexecutor', :path => "#{rnPrefix}/ReactCommon/jsiexecutor"
   pod 'React-jsinspector', :path => "#{rnPrefix}/ReactCommon/jsinspector"
+  pod 'react-native-ble-plx', :path => '../node_modules/react-native-ble-plx'
+  pod 'react-native-ble-plx-swift', :path => '../node_modules/react-native-ble-plx'
   pod 'ReactCommon/jscallinvoker', :path => "#{rnPrefix}/ReactCommon"
   pod 'ReactCommon/turbomodule/core', :path => "#{rnPrefix}/ReactCommon"
   pod 'Yoga', :path => "#{rnPrefix}/ReactCommon/yoga"

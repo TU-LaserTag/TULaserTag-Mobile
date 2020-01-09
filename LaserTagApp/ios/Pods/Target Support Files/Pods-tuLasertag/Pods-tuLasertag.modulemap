@@ -1,0 +1,6 @@
+module Pods_tuLasertag {
+  umbrella header "Pods-tuLasertag-umbrella.h"
+
+  export *
+  module * { export * }
+}

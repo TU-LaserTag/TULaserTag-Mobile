@@ -1,9 +1,10 @@
 {
   "scripts": {
+    "test": "node_modules/.bin/jest",
+    "test:debug": "node --inspect-brk node_modules/jest/bin/jest.js --runInBand",
     "start": "react-native start",
     "android": "react-native run-android",
-    "ios": "react-native run-ios",
-    "web": "expo start --web",
+    "ios": "expo start --ios",
     "postinstall": "jetify"
   },
   "dependencies": {
@@ -19,8 +20,10 @@
     "dns.js": "^1.0.1",
     "domain-browser": "^1.1.1",
     "expo": "^36.0.0",
+    "expo-cli": "^3.11.5",
     "expo-font": "~8.0.0",
     "https-browserify": "0.0.1",
+    "jest-expo": "^36.0.1",
     "native-base": "^2.13.8",
     "path-browserify": "0.0.0",
     "punycode": "^1.2.4",
@@ -57,6 +60,7 @@
     "@babel/core": "^7.0.0",
     "babel-jest": "~24.9.0",
     "jest": "~24.9.0",
+    "jest-exxpo": "^36.0.0",
     "jetifier": "~1.6.4",
     "metro-react-native-babel-preset": "~0.56.0",
     "react-test-renderer": "~16.9.0",
@@ -89,6 +93,9 @@
     "tty": "tty-browserify",
     "vm": "vm-browserify",
     "tls": false
+  },
+  "jest": {
+    "preset": "jest-expo"
   },
   "browser": {
     "zlib": "browserify-zlib",
