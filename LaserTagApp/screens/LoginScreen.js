@@ -37,11 +37,56 @@ export default class LoginScreen extends Component {
     };
     componentDidMount(){
         console.log("Mount")
-        checkLoginData
+        loadStorage()
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
     } 
     
+    loadStorage = () => {
+      storage.load ({
+        key: 'userData',
+
+        // autoSync (default: true) means if data is not found or has expired,
+        // then invoke the corresponding sync method
+        autoSync: true,
+
+        // syncInBackground (default: true) means if data expired,
+        // return the outdated data first while invoking the sync method.
+        // If syncInBackground is set to false, and there is expired data,
+        // it will wait for the new data and return only after the sync completed.
+        // (This, of course, is slower)
+        syncInBackground: true,
+
+        // you can pass extra params to the sync method
+        // see sync example below
+        syncParams: {
+          extraFetchOptions: {
+            // blahblah
+          },
+          someFlag: true
+        }
+    })
+    .then(ret => {
+    // found data go to then()
+    console.log(ret);
+    this.setState({usernae: ret.username,
+                   pass: ret.password})
+    })
+    .catch(err => {
+      // any exception including data not found
+      // goes to catch()
+      console.warn(err.message);
+      switch (err.name) {
+        case 'NotFoundError':
+          console.log((" Nodata"))
+          break;
+        case 'ExpiredError':
+          // TODO
+          break;
+      }
+    });
+      }
+
     loginPressed = () => {
       var error = false;
       console.log("Pressed login");
@@ -65,7 +110,8 @@ export default class LoginScreen extends Component {
         const loginData = {
           username: this.state.username,
           userid: 0,
-          role: "user"
+          role: "user",
+          pass: this.state.pass
         }
         this.loggedIn(loginData)
         this.props.navigation.navigate("Home");
@@ -79,6 +125,7 @@ export default class LoginScreen extends Component {
         data: {
           username: data.username,
           userid: data.userid,
+          password: data.pass,
           role: data.role
         }
       })
