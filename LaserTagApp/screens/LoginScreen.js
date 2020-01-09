@@ -11,6 +11,7 @@ import CustomHeader from '../components/CustomHeader';
 import HomeScreen from './HomeScreen';
 import Title from '../components/Title'
 import HomeIcon from '../components/Home_Icon';
+import { storage } from '../Storage';
 
 
 export default class LoginScreen extends Component {
@@ -36,6 +37,7 @@ export default class LoginScreen extends Component {
     };
     componentDidMount(){
         console.log("Mount")
+        checkLoginData
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
     } 
@@ -60,9 +62,27 @@ export default class LoginScreen extends Component {
         return // Breaks out of sending data
       } else{
         //this.sendRequest()
+        const loginData = {
+          username: this.state.username,
+          userid: 0,
+          role: "user"
+        }
+        this.loggedIn(loginData)
         this.props.navigation.navigate("Home");
       }
     };
+
+    loggedIn = (data) => {
+      console.log("Logging in and storing data",data)
+      storage.save({
+        key: 'userData',
+        data: {
+          username: data.username,
+          userid: data.userid,
+          role: data.role
+        }
+      })
+    }
   
       sendRequest(sValue) {
         this.setState({loading: true})
@@ -93,10 +113,10 @@ export default class LoginScreen extends Component {
             this.setState({loading: false})
             return "error"
             
-          } else if ( response == "error") { // Or no echem search data
+          } else if ( response == "error") { //
             console.log("More errors")
             this.setState({loading: false})
-            return "Big sad" // From here submit request for echem search
+            return "Big sad" //
           }else{
               return response.text()
           } // Happy path
@@ -145,12 +165,14 @@ export default class LoginScreen extends Component {
            <CustomHeader {...this.props} headerText= "Login" headerType = "login" />
             <Container>
             <Input
+              value = "Hello world"
               autoCompleteType = 'username'
               placeholder='Username'
               returnKeyType='done'
               leftIcon={{ type: 'font-awesome', name: 'user' }}
               errorMessage= {this.state.usernameError}
               onChangeText={this.editUsername}
+
             />
             <Input
               autoCompleteType = 'password'

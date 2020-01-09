@@ -12,8 +12,8 @@ export default class HomeScreen extends Component {
     title: 'Home', // Possibly have it dynamic to name
   };
  state = {
-  menuOptions: ["Gun Communication","Join Game", "Server Communication"],
-  menuTranslater: [{text:"Gun Communication",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Server Communication', value: "Server"}]
+  menuOptions: ["Connect to Blaster","Join Game", "Server Communication"],
+  menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Server Communication', value: "Server"}]
  }
 
  onMenuPress = (menuVal) => {
