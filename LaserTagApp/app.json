@@ -4,16 +4,22 @@
     "slug": "LaserTagApp",
     "privacy": "public",
     "sdkVersion": "36.0.0",
+    "ios": {
+      "bundleIdentifier": "com.tucse.tulasertag",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.tucse.tulasertag"
+    },
     "platforms": [
       "ios",
-      "android",
-      "web"
+      "android"
     ],
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/gunicon.png",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/tu.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -22,9 +28,6 @@
     },
     "assetBundlePatterns": [
       "**/*"
-    ],
-    "ios": {
-      "supportsTablet": false
-    }
+    ]
   }
 }
