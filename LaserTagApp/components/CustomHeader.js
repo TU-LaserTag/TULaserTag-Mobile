@@ -2,8 +2,6 @@ import React, { Component } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { ThemeProvider , Header, Icon, Button} from 'react-native-elements';
 import { LaserTheme } from './Custom_theme';
-import HomeIcon from './Home_Icon'
-import SignupIcon from './Signup_Icon'
 import { Title } from 'native-base';
 export default class CustomHeader extends Component {
   goHome = () => {
@@ -17,6 +15,10 @@ export default class CustomHeader extends Component {
 
   goLogin = () => {
     this.props.navigation.navigate("Login")
+  }
+
+  goBack = () => {
+    this.props.navigation.goBack()
   }
   
 
@@ -44,6 +46,14 @@ export default class CustomHeader extends Component {
       return (
         <Header>
         <Text></Text>
+        <Title><Text>{this.props.headerText}</Text></Title>
+        <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
+      </Header>
+      )
+    } else if (type == "home") {
+      return (
+        <Header>
+        <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
         <Title><Text>{this.props.headerText}</Text></Title>
         <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
       </Header>

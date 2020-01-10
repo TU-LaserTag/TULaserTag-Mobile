@@ -15,6 +15,7 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
+import {Button, ThemeProvider} from 'react-native-elements'
 import BleManager from 'react-native-ble-manager';
 
 const window = Dimensions.get('window');
@@ -231,13 +232,11 @@ export default class BluetoothManager extends Component {
     const list = Array.from(this.state.peripherals.values());
     
     return (
-      <View style={styles.container}>
-        <TouchableHighlight style={{marginTop: 40,margin: 20, padding:20, backgroundColor:'#ccc'}} onPress={() => this.startScan() }>
-          <Text>Scan Bluetooth ({this.state.scanning ? 'on' : 'off'})</Text>
-        </TouchableHighlight>
-        <TouchableHighlight style={{marginTop: 0,margin: 20, padding:20, backgroundColor:'#ccc'}} onPress={() => this.retrieveConnected() }>
-          <Text>Retrieve connected peripherals</Text>
-        </TouchableHighlight>
+     <ThemeProvider>
+        <Button title= {this.state.scanning ? 'Scanning...' : 'Start Scanning'} style={{marginTop: 40,margin: 20, padding:20, backgroundColor:'#fff'}} onPress={() => this.startScan() }>
+        </Button>
+        <Button title= "Check connected Blasters" style={{marginTop: 0,margin: 20, padding:20, backgroundColor:'#ccc'}} onPress={() => this.retrieveConnected() }>
+        </Button>
         <ScrollView style={styles.scroll}>
           {(list.length == 0) &&
             <View style={{flex:1, margin: 20}}>
@@ -251,7 +250,7 @@ export default class BluetoothManager extends Component {
           />
 
         </ScrollView>
-      </View>
+        </ThemeProvider>
     );
   }
 }
