@@ -6,10 +6,14 @@
     "sdkVersion": "36.0.0",
     "ios": {
       "bundleIdentifier": "com.tucse.tulasertag",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "publishBundlePath": "ios/tu-laser-tag/Supporting/shell-app.bundle",
+      "publishManifestPath": "ios/tu-laser-tag/Supporting/shell-app-manifest.json"
     },
     "android": {
-      "package": "com.tucse.tulasertag"
+      "package": "com.tucse.tulasertag",
+      "publishBundlePath": "android/app/src/main/assets/shell-app.bundle",
+      "publishManifestPath": "android/app/src/main/assets/shell-app-manifest.json"
     },
     "platforms": [
       "ios",
@@ -29,8 +33,12 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "entryPoint": "node_modules/expo/AppEntry.js"
-  },
-  "displayName": "TU Laser Tag",
-  "name": "tuLasertag"
+    "entryPoint": "node_modules/expo/AppEntry.js",
+    "isDetached": true,
+    "detach": {
+      "iosExpoViewUrl": "https://s3.amazonaws.com/exp-exponent-view-code/ios-v2.14.2-sdk36.0.0-e055f8a6-47bf-455c-9f14-d5a631ea2dd3.tar.gz",
+      "androidExpoViewUrl": "https://s3.amazonaws.com/exp-exponent-view-code/android-v2.14.0-sdk36.0.0-fb8689e6-fd42-4b18-b01f-ac2ef3bc8681.tar.gz"
+    },
+    "scheme": "exp922449205f174d4cbadfffbabd11e8cd"
+  }
 }

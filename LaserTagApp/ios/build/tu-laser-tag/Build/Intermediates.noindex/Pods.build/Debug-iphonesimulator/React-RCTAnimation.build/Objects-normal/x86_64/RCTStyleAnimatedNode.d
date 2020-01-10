@@ -1,0 +1,9 @@
+dependencies: \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/node_modules/react-native/Libraries/NativeAnimation/Nodes/RCTStyleAnimatedNode.m \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Target\ Support\ Files/React-RCTAnimation/React-RCTAnimation-prefix.pch \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTStyleAnimatedNode.h \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTAnimatedNode.h \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTAnimationUtils.h \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTDefines.h \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTValueAnimatedNode.h \
+  /Users/canthony/Documents/TULaserTag-Mobile/LaserTagApp/ios/Pods/Headers/Public/React-Core/React/RCTTransformAnimatedNode.h
