@@ -4,13 +4,13 @@ Laser tag Mobile application for Taylor University
 Shared and useful information:
 
 Bluetooth Gun Service UUID: 
-206ac814-ed0b-4204-bd82-e3a0b3bbecc2
+206AC814-ED0B-4204-BD82-E3A0B3BBECC2
 
-Characteristic TX UUID
-9c3eee6d-48fd-4080-97a8-240c02ada5f5
+Characteristic UUID
+9C3EEE6d-48FD-4080-97A8-240C02ADA5F5
 
 Characteristic RX UUID:
-bb950764-a597-4e20-8613-e43bf9d1330c
+BB950764-A597-4E20-8613-E43BF9D1330C
 
 Testing arduino MAC:
 
