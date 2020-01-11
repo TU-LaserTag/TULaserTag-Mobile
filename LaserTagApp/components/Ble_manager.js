@@ -15,8 +15,10 @@ import {
   FlatList,
   Dimensions,
 } from 'react-native';
+import {ListItem,Divider} from 'react-native-elements'
 import {Button, ThemeProvider} from 'react-native-elements'
 import BleManager from 'react-native-ble-manager';
+import { LaserTheme } from './Custom_theme';
 
 const window = Dimensions.get('window');
 
@@ -44,7 +46,10 @@ export default class BluetoothManager extends Component {
   componentDidMount() {
     AppState.addEventListener('change', this.handleAppStateChange);
 
-    BleManager.start({showAlert: false});
+    BleManager.start({showAlert: false})
+    .then((result) =>{
+      console.log("initialized Bluetooth",result)
+    });
 
     this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
     this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan );
@@ -112,7 +117,7 @@ export default class BluetoothManager extends Component {
   startScan() {
     if (!this.state.scanning) {
       //this.setState({peripherals: new Map()});
-      BleManager.scan([], 3, true).then((results) => {
+      BleManager.scan([], 5, false).then((results) => {
         console.log('Scanning...');
         this.setState({scanning:true});
       });
@@ -145,7 +150,7 @@ export default class BluetoothManager extends Component {
     this.setState({ peripherals });
   }
 
-  test(peripheral) {
+  attemptGunConnection(peripheral) {
     if (peripheral){
       if (peripheral.connected){
         BleManager.disconnect(peripheral.id);
@@ -215,15 +220,22 @@ export default class BluetoothManager extends Component {
   }
 
   renderItem(item) {
-    const color = item.connected ? 'green' : '#fff';
+    const color = item.connected ? 'green' : '#fff'; //Remind me to turn these to LinearGradient + scale feedback
+    console.log(item);
     return (
-      <TouchableHighlight onPress={() => this.test(item) }>
-        <View style={[styles.row, {backgroundColor: color}]}>
-          <Text style={{fontSize: 12, textAlign: 'center', color: '#333333', padding: 10}}>{item.name}</Text>
-          <Text style={{fontSize: 10, textAlign: 'center', color: '#333333', padding: 2}}>RSSI: {item.rssi}</Text>
-          <Text style={{fontSize: 8, textAlign: 'center', color: '#333333', padding: 2, paddingBottom: 20}}>{item.id}</Text>
-        </View>
-      </TouchableHighlight>
+      <ListItem onPress={() => this.test(item) }
+        contentContainerStyle = {{
+          backgroundColor: color,
+        }}
+        subtitleStyle = {{
+          fontSize: 8,
+        }}
+        title={item.name}
+        subtitle = {item.id}
+        bottomDivider
+        chevron
+      />
+      
     );
   }
 
@@ -232,12 +244,13 @@ export default class BluetoothManager extends Component {
     const list = Array.from(this.state.peripherals.values());
     
     return (
-     <ThemeProvider>
-        <Button title= {this.state.scanning ? 'Scanning...' : 'Start Scanning'} style={{marginTop: 40,margin: 20, padding:20, backgroundColor:'#fff'}} onPress={() => this.startScan() }>
+     <ThemeProvider theme={LaserTheme}>
+        <Button title= {this.state.scanning ? 'Scanning...' : 'Start Scanning'} style={{marginTop: 5,margin: 5, padding:10, backgroundColor:'#ccc'}} onPress={() => this.startScan() }>
         </Button>
-        <Button title= "Check connected Blasters" style={{marginTop: 0,margin: 20, padding:20, backgroundColor:'#ccc'}} onPress={() => this.retrieveConnected() }>
+        <Button title= "Check Connected Blasters" style={{marginTop: 5,margin: 5, padding:10, backgroundColor:'#ccc'}} onPress={() => this.retrieveConnected() }>
         </Button>
-        <ScrollView style={styles.scroll}>
+        <Divider style={{ backgroundColor: 'blue' }} />
+        
           {(list.length == 0) &&
             <View style={{flex:1, margin: 20}}>
               <Text style={{textAlign: 'center'}}>No peripherals</Text>
@@ -249,7 +262,7 @@ export default class BluetoothManager extends Component {
             keyExtractor={item => item.id}
           />
 
-        </ScrollView>
+        
         </ThemeProvider>
     );
   }

@@ -37,8 +37,8 @@ export default class GunScreen extends Component {
   render() {
 
     return (
-      <ThemeProvider theme= {LaserTheme}>
-        <CustomHeader headerText = "Connect to Gun" headerType = "gun"/>
+      <ThemeProvider theme={LaserTheme}>
+        <CustomHeader {...this.props} headerText = "Connect to Gun" headerType = "gun"/>
         <BluetoothManager>
           </BluetoothManager>
       </ThemeProvider>

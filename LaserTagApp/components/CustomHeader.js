@@ -16,7 +16,12 @@ export default class CustomHeader extends Component {
   goLogin = () => {
     this.props.navigation.navigate("Login")
   }
-
+  logout = () => {
+    console.log("Logging out");
+  }
+  goSettings = () => {
+    console.log("opening settings")
+  }
   goBack = () => {
     this.props.navigation.goBack()
   }
@@ -39,18 +44,18 @@ export default class CustomHeader extends Component {
         <Header>
         <Text></Text>
         <Title><Text>{this.props.headerText}</Text></Title>
-        <Icon name='login' type='entypo' color='white' onPress={() => this.goLogin()} />
+        <Icon name='login' type='feather' color='white' onPress={() => this.goLogin()} />
       </Header>
       )
     } else if (type == "home") {
       return (
         <Header>
-        <Text></Text>
+        <Icon name='settings' type='feather' color='white' onPress={() => this.goSettings()} />
         <Title><Text>{this.props.headerText}</Text></Title>
-        <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
+        <Icon name='log-out' type='feather' color='white' onPress={() => this.logout()} />
       </Header>
       )
-    } else if (type == "home") {
+    } else if (type == "gun") {
       return (
         <Header>
         <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
@@ -58,7 +63,15 @@ export default class CustomHeader extends Component {
         <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
       </Header>
       )
-    }
+    } else if (type == "join") {
+    return (
+      <Header>
+      <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
+      <Title><Text>{this.props.headerText}</Text></Title>
+      <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
+    </Header>
+    )
+  }
   }
 
   render() {

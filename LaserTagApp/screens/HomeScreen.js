@@ -6,6 +6,7 @@ import { Dimensions, ActivityIndicator } from 'react-native';
 import { Container, Content, Footer, FooterTab, Button, Body} from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 import { ThemeProvider } from 'react-native-elements';
+import {LaserTheme} from '../components/Custom_theme';
 //import LaserTheme from '../components/Custom_theme'
 export default class HomeScreen extends Component {
   static navigationOptions = {
@@ -32,7 +33,7 @@ export default class HomeScreen extends Component {
     //const imageHeight = Math.round(dimensions.width * 0.20);
     const imageWidth = dimensions.width;
     return (
-      <ThemeProvider>
+      <ThemeProvider theme={LaserTheme}>
        <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
                  
         <Content>

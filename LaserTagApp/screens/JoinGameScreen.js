@@ -151,8 +151,8 @@ export default class JoinGameScreen extends Component {
       }
       render() {
         return(
-          <ThemeProvider theme={LaserTheme}>
-           <CustomHeader {...this.props} headerText= "Join Game" />
+          <ThemeProvider {...this.props} theme={LaserTheme}>
+           <CustomHeader {...this.props} headerText= "Join Game" headerType = "join" />
             <Container>
             <Input
               placeholder='Game Key (optional)'

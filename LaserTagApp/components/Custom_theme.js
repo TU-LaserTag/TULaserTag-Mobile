@@ -8,14 +8,14 @@ export const LaserTheme = {
         color: 'white',
       },
       buttonStyle: {
-        backgroundColor: 'grey',
+        backgroundColor: 'blue',
       }
     },
     Container: {
         backgroundColor: 'black'
     },
     Header:{
-        backgroundColor:'grey'
+        backgroundColor:'purple'
     },
     Input:{
         errorStyle:{
