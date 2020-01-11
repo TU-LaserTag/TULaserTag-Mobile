@@ -24,7 +24,7 @@ const window = Dimensions.get('window');
 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
-
+var Buffer = require('buffer/').Buffer
 
 export default class BluetoothManager extends Component {
   constructor(){
@@ -33,7 +33,8 @@ export default class BluetoothManager extends Component {
     this.state = {
       scanning:false,
       peripherals: new Map(),
-      appState: ''
+      appState: '',
+      connectedGun: {}
     }
 
     this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
@@ -47,8 +48,8 @@ export default class BluetoothManager extends Component {
     AppState.addEventListener('change', this.handleAppStateChange);
 
     BleManager.start({showAlert: false})
-    .then((result) =>{
-      console.log("initialized Bluetooth",result)
+    .then(() =>{
+      console.log("initialized Bluetooth")
     });
 
     this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
@@ -115,9 +116,10 @@ export default class BluetoothManager extends Component {
   }
 
   startScan() {
+    var serviceArray = ["206ac814-ed0b-4204-bd82-e3a0b3bbecc2"]
     if (!this.state.scanning) {
       //this.setState({peripherals: new Map()});
-      BleManager.scan([], 5, false).then((results) => {
+      BleManager.scan([], 3, true).then((results) => {
         console.log('Scanning...');
         this.setState({scanning:true});
       });
@@ -142,12 +144,41 @@ export default class BluetoothManager extends Component {
 
   handleDiscoverPeripheral(peripheral){
     var peripherals = this.state.peripherals;
-    console.log('Got ble peripheral', peripheral);
+    //console.log('Got ble peripheral', peripheral);
     if (!peripheral.name) {
       peripheral.name = 'NO NAME';
+      return;
     }
     peripherals.set(peripheral.id, peripheral);
     this.setState({ peripherals });
+    if (this.desiredPeriferal(peripheral)){
+      attemptGunConnection(peripheral);
+    }
+  }
+  desiredPeriferal(peripheral){
+    //console.log("Checking",peripheral);
+    return false;
+  }
+  readData(peripheral){
+    BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
+      console.log("Got info",peripheralInfo);
+      var service = '206ac814-ed0b-4204-bd82-e3a0b3bbecc2';
+      var readCharacteristic = '206AC814-ED0B-4204-BD82-E3A0B3BBECC2';
+      //var crustCharacteristic = '13333333-3333-3333-3333-333333330001';
+      BleManager.read(peripheral.id, service, readCharacteristic).then((data) => {
+      console.log('Reading From: ' + peripheral.id);
+      console.log('read:',data);
+      const buffer = Buffer.Buffer.from(data);    //https://github.com/feross/buffer#convert-arraybuffer-to-buffer
+      const newData = buffer.readUInt8(1, true);
+      console.log("BufferData",newData)
+    }).catch((error) => {
+      // Failure code
+      console.warn(error);
+    });
+
+}).catch((error) => {
+  console.warn('Connection error', error); // Put a toast or something here
+});
   }
 
   attemptGunConnection(peripheral) {
@@ -164,66 +195,20 @@ export default class BluetoothManager extends Component {
             this.setState({peripherals});
           }
           console.log('Connected to ' + peripheral.id);
-
-
-          setTimeout(() => {
-
-            /* Test read current RSSI value
-            BleManager.retrieveServices(peripheral.id).then((peripheralData) => {
-              console.log('Retrieved peripheral services', peripheralData);
-
-              BleManager.readRSSI(peripheral.id).then((rssi) => {
-                console.log('Retrieved actual RSSI value', rssi);
-              });
-            });*/
-
-            // Test using bleno's pizza example
-            // https://github.com/sandeepmistry/bleno/tree/master/examples/pizza
-            BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-              console.log(peripheralInfo);
-              var service = '13333333-3333-3333-3333-333333333337';
-              var bakeCharacteristic = '13333333-3333-3333-3333-333333330003';
-              var crustCharacteristic = '13333333-3333-3333-3333-333333330001';
-
-              setTimeout(() => {
-                BleManager.startNotification(peripheral.id, service, bakeCharacteristic).then(() => {
-                  console.log('Started notification on ' + peripheral.id);
-                  setTimeout(() => {
-                    BleManager.write(peripheral.id, service, crustCharacteristic, [0]).then(() => {
-                      console.log('Writed NORMAL crust');
-                      BleManager.write(peripheral.id, service, bakeCharacteristic, [1,95]).then(() => {
-                        console.log('wrote 351 temperature, the pizza should be BAKED');
-                        /*
-                        var PizzaBakeResult = {
-                          HALF_BAKED: 0,
-                          BAKED:      1,
-                          CRISPY:     2,
-                          BURNT:      3,
-                          ON_FIRE:    4
-                        };*/
-                      });
-                    });
-
-                  }, 500);
-                }).catch((error) => {
-                  console.log('Notification error', error);
-                });
-              }, 200);
-            });
-
-          }, 900);
         }).catch((error) => {
-          console.log('Connection error', error);
-        });
+          console.log('Connection failed',error)
+        })
+        if (this.readData(peripheral) == false){
+          this.readData(peripheral);
+        }      
       }
     }
   }
 
   renderItem(item) {
     const color = item.connected ? 'green' : '#fff'; //Remind me to turn these to LinearGradient + scale feedback
-    console.log(item);
     return (
-      <ListItem onPress={() => this.test(item) }
+      <ListItem onPress={() => this.attemptGunConnection(item) }
         contentContainerStyle = {{
           backgroundColor: color,
         }}
