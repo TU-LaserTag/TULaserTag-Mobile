@@ -71,7 +71,7 @@ export default class LoginScreen extends Component {
           break;
       }
     });
-      }
+    }
 
     loginPressed = () => {
       var error = false;
