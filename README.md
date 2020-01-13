@@ -13,4 +13,10 @@ Characteristic RX UUID:
 BB950764-A597-4E20-8613-E43BF9D1330C
 
 Testing arduino MAC:
+24:6f:28:a8:3f:cc
+
+Arduino BT ID:
+24:6f:28:a8:3f:ce
+
+
 
