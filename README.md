@@ -18,5 +18,5 @@ Testing arduino MAC:
 Arduino BT ID:
 24:6f:28:a8:3f:ce
 
-
-
+ID UUID?:
+89C52326-593D-3FD3-AFEC-FF05041B68CF
