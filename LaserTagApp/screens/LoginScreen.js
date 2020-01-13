@@ -34,8 +34,7 @@ export default class LoginScreen extends Component {
       this.setState({ key });
     };
     componentDidMount(){
-        console.log("Mount")
-        console.log("gSstorage",global.storage)
+        console.log("Login mount")
         this.loadStorage()
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
