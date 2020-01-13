@@ -41,7 +41,7 @@ export default class BluetoothManager extends Component {
 
     this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
     this.handleStopScan = this.handleStopScan.bind(this);
-    //this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
+    this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
     this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(this);
     this.handleAppStateChange = this.handleAppStateChange.bind(this);
   }
@@ -67,13 +67,14 @@ export default class BluetoothManager extends Component {
   .catch(err => {
     // any exception including data not found
     // goes to catch()
+    this.startBLEmanager(false);
+
     console.log(err.message);
     switch (err.name) {
       case 'NotFoundError':
         console.log((" NO gun"))
         return false;
       case 'ExpiredError': // Gun only lasts for so long
-        this.startBLEmanager(false);
         break;
     }
   });
@@ -116,7 +117,7 @@ export default class BluetoothManager extends Component {
     this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
     this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan );
     this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral );
-    this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
+   // this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
 
     if (Platform.OS === 'android' && Platform.Version >= 23) {
         PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION).then((result) => {
@@ -150,7 +151,7 @@ export default class BluetoothManager extends Component {
     console.log("unmouting")
     this.handlerDiscover.remove();
     this.handlerStop.remove();
-    this.handlerDisconnect.remove();
+    //this.handlerDisconnect.remove();
     //this.handlerUpdate.remove();
   }
 
@@ -168,7 +169,7 @@ export default class BluetoothManager extends Component {
   }
 
   handleUpdateValueForCharacteristic(data) {
-    console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
+    //console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
   }
 
   handleStopScan() {
@@ -179,7 +180,6 @@ export default class BluetoothManager extends Component {
     var peripherals = this.state.peripherals;
     //console.log('Got ble peripheral', peripheral);
     if (!peripheral.name) {
-      console.log("Nonamed");
       peripheral.name = 'NO NAME';
       return;
     }
@@ -193,7 +193,7 @@ export default class BluetoothManager extends Component {
     var serviceArray = ["206AC814-ED0B-4204-BD82-246F28A83FCE"] // GEt Clip ID and populate here
     if (!this.state.scanning) {
       //this.setState({peripherals: new Map()});
-      BleManager.scan(serviceArray , 1, true).then((results) => {
+      BleManager.scan(serviceArray , 1, false).then((results) => {
         console.log('Scanning...');
         this.setState({scanning:true});
       });
@@ -205,7 +205,6 @@ export default class BluetoothManager extends Component {
       if (results.length == 0) {
         console.log('No connected peripherals')
       }
-      console.log(results);
       var peripherals = this.state.peripherals;
       for (var i = 0; i < results.length; i++) {
         var peripheral = results[i];
@@ -335,9 +334,9 @@ toggleConnection(peripheral) {
             // Test using bleno's pizza example
             // https://github.com/sandeepmistry/bleno/tree/master/examples/pizza
             BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-              console.log(peripheralInfo);
+              //console.log(peripheralInfo);
               var service = peripheralInfo.advertising.serviceUUIDs[0];
-              console.log(service);
+              //console.log(service);
               var notifyCharacteristic = 'BB950764-A597-4E20-8613-E43BF9D1330C';
               var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';  
                 BleManager.read(peripheral.id, service, RXCharacteristic)
@@ -361,7 +360,6 @@ toggleConnection(peripheral) {
 
   renderItem(item) {
     const color = item.connected ? 'green' : '#fff'; //Remind me to turn these to LinearGradient + scale feedback
-    console.log(item);
     return (
       <ListItem onPress={() => this.toggleConnection(item) }
         contentContainerStyle = {{
@@ -381,7 +379,6 @@ toggleConnection(peripheral) {
 
 
   render() {
-    console.log("Loading",this.state)
     const list = Array.from(this.state.peripherals.values());
     
     return (
