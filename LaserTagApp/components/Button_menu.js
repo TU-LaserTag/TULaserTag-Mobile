@@ -8,7 +8,7 @@ export default class ButtonMenu extends Component{
     renderItem = (text, i) => {
         const {onPressItem} = this.props
         //{console.log("Rendering",text,i)}
-        const iconMap = ['search1','filetext1']
+        const iconMap = ['link','earth','plussquareo']
         return ( 
                 <Button full iconLeft primary key={i} style = {styles.button} onPress={ () => onPressItem(i)}>
                 <Icon name={iconMap[i]}/>
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        backgroundColor: '#E9E6C2',
+        backgroundColor: 'black',
     },  
     button: {
         marginTop: 10,
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: '#ADD8E6',
         borderRadius: 0, // 0-50
-        borderColor: 'black'
+        borderColor: 'white'
     },
     buttonText: {
         color: 'darkblue',

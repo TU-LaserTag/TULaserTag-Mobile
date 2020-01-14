@@ -17,6 +17,8 @@ export default class CustomHeader extends Component {
     this.props.navigation.navigate("Login")
   }
   logout = () => {
+    // Erase/reset session data
+    this.props.navigation.navigate("Login")
     console.log("Logging out");
   }
   goSettings = () => {

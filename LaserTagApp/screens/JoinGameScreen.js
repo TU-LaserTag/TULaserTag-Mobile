@@ -1,10 +1,12 @@
 import React, { Component } from 'react';
 import {StyleSheet,View} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
-import { Button, ThemeProvider, Input } from 'react-native-elements';
+import { Button, ThemeProvider, Input, Divider} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import { Container } from 'native-base';
 import CustomHeader from '../components/CustomHeader';
+import GunStatusDisplay from '../components/GunStatusDisplay'
+import BleManager, { connect } from 'react-native-ble-manager';
 
 //import Title from '../components/Ghs_Comps/Title'
 
@@ -16,9 +18,13 @@ export default class JoinGameScreen extends Component {
     state = {
       loading: false,
       key: '',
-      keyError:''
+      keyError:'',
+      gunConnected: false
     }
 
+    updateConnectionStatus(data){
+      console.log("Updating Connection Status",data);
+    }
     
     editGamekey = key => {
       this.setState({ key });
@@ -31,9 +37,12 @@ export default class JoinGameScreen extends Component {
     
     joinPressed = () => {
       var error = false;
-      console.log("Joining Game");
+      console.log("Joining Coded Game");
       console.log(this.state);
-
+      if (!this.state.gunConnected){
+        console.log("Gun not connected")
+        return;
+      }
       if (this.state.key == '') {
         console.log( "Empty key");
         this.setState({key: ''})
@@ -128,11 +137,17 @@ export default class JoinGameScreen extends Component {
       }
 
       getGameStatus = () => {
-        console.log("Getting game status",this.state)
         if (this.state.key == "") {
           return "View Games"
         } else{
           return "Join Game"
+        }
+      }
+      getKeyStatus = () => {
+        if (this.state.key == "") {
+          return true;
+        } else{
+          return false;
         }
       }
       renderSpinner = () => {
@@ -153,7 +168,7 @@ export default class JoinGameScreen extends Component {
         return(
           <ThemeProvider {...this.props} theme={LaserTheme}>
            <CustomHeader {...this.props} headerText= "Join Game" headerType = "join" />
-            <Container>
+            <GunStatusDisplay updateConStatus = {this.updateConnectionStatus}></GunStatusDisplay>
             <Input
               placeholder='Game Key (optional)'
               keyboardType='number-pad'
@@ -163,11 +178,15 @@ export default class JoinGameScreen extends Component {
               onChangeText={this.editGamekey}
             />
             <Button 
-              title= {this.getGameStatus()}
+              title= "Join Private Game"
+              disabled = {this.getKeyStatus()}
               onPress={() => this.joinPressed()}
               />
-             </Container>
-          </ThemeProvider>
+            <Divider style={{ backgroundColor: 'gray' , paddingTop: 5}} />
+            { // Render All Availible games in cards with chevrons here
+
+            }
+            </ThemeProvider>
           );
         }
       }

@@ -7,13 +7,15 @@ import { Container, Content, Footer, FooterTab, Button, Body} from 'native-base'
 import CustomHeader from '../components/CustomHeader';
 import { ThemeProvider } from 'react-native-elements';
 import {LaserTheme} from '../components/Custom_theme';
+import BleManager, { connect } from 'react-native-ble-manager';
+
 //import LaserTheme from '../components/Custom_theme'
 export default class HomeScreen extends Component {
   static navigationOptions = {
     title: 'Home', // Possibly have it dynamic to name
   };
  state = {
-  menuOptions: ["Connect to Blaster","Join Game", "Server Communication"],
+  menuOptions: ["Manage Gun","Join Game", "Host Game"],
   menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Server Communication', value: "Server"}]
  }
 
