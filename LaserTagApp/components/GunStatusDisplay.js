@@ -41,17 +41,16 @@ export default class GunStatusDesplay extends Component {
     this.checkBLE();
     this.loadStorage()  // Checks storage and then builds upon startBLEManager
     
-    this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
-    //this.handleStopScan = this.handleStopScan.bind(this);
-    //this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
-    this.handleDisconnectedPeripheral = this.handleDisconnectedPeripheral.bind(this);
-    //this.handleAppStateChange = this.handleAppStateChange.bind(this);
+    this.gunStatusHandleDiscoverPeripheral = this.gunStatusHandleDiscoverPeripheral.bind(this);
+    this.gunStatusHandleStopScan = this.gunStatusHandleStopScan.bind(this);
+    this.gunStatusHandleDisconnectedPeripheral = this.gunStatusHandleDisconnectedPeripheral.bind(this);
+    this.handleAppStateChange = this.handleAppStateChange.bind(this);
   }
   checkBLE = () => { // Does a quick scan and checks if any devices were discovered
     console.log("checking ble");
     if (!this.state.scanning) {
       //var serviceArray = ["206AC814-ED0B-4204-BD82-246F28A83FCE"] // GEt Clip ID and populate here
-      return BleManager.scan([], 1, false).then((results) => {
+      return BleManager.scan([], 0.2, false).then((results) => {
         console.log('Scanning...');
         this.setState({scanning:true});
         setTimeout(() => {console.log("ScanTimeout, stopping scan");
@@ -64,13 +63,13 @@ export default class GunStatusDesplay extends Component {
                               this.startBLEmanager(false);
                             }
                           });              
-        },1300);
+        },500);
       });
     }
     
   }
   loadStorage = () => {
-    console.log("loading storage");
+    console.log("loading Gun display stoorage");
     global.storage.load ({
     key: 'gunData',
     autoSync: true,
@@ -149,11 +148,25 @@ export default class GunStatusDesplay extends Component {
   componentDidMount() {
     console.log("status display");
     AppState.addEventListener('change', this.handleAppStateChange);
-    this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
-    //this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan );
-    this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral );
-    //this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
-  
+    //updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+    //result = updateListeners[1]()
+    //console.log(result)
+    const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+    const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+    const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+
+    if (discoverListeners.length <= 1) {
+        console.log("GunStatus discover listener");
+        this.gunStatusHandlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.gunStatusHandleDiscoverPeripheral );
+    }
+    if (stopListeners.length <= 1) {
+      console.log("GunStatus stop listener");
+      this.gunStatusHandlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.gunStatusHandleStopScan );
+    }
+    if (disconnectListeners.length <= 1) {
+      console.log("GunStatus disconnect listener");
+      this.gunStatusHandlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.gunStatusHandleDisconnectedPeripheral );
+    }
 
     if (Platform.OS === 'android' && Platform.Version >= 23) {
         PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION).then((result) => {
@@ -174,26 +187,35 @@ export default class GunStatusDesplay extends Component {
   }
   componentWillUnmount() { // cancel all async tasks herere?
     console.log("unmouting gun status")
-    this.handlerDiscover.remove();
-    //this.handlerStop.remove();
-    this.handlerDisconnect.remove();
-    //this.handlerUpdate.remove();
-    if (this.state.emitterStarted){
-      console.log("keep emiteer rolling")
+    const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+    const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+    const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+    console.log(disconnectListeners,discoverListeners,stopListeners);
+
+    if (discoverListeners.length > 0){
+        this.gunStatusHandlerDiscover.remove('BleManagerDiscoverPeripheral');
     }
+    if (stopListeners.length >0){
+      this.gunStatusHandlerStop.remove('BleManagerStopScan');
+    }
+    if (disconnectListeners.length > 0){
+      this.gunStatusHandlerDisconnect.remove('BleManagerDisconnectPeripheral');
+    }
+    
   }
 
   handleAppStateChange(nextAppState) {
+    console.log("Appstate",nextAppState);
     if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-      console.log('App has come to the foreground!')
-      BleManager.getConnectedPeripherals([]).then((peripheralsArray) => {
-        console.log('Connected peripherals: ' + peripheralsArray.length);
-      });
+      console.log('GunStatus App has come to the foreground!')
+      console.log(this.state.connectedGun);
+      this.checkGunConnection();
+      
     }
     this.setState({appState: nextAppState});
   }
 
-  handleDisconnectedPeripheral(gun) {
+  gunStatusHandleDisconnectedPeripheral(gun) {
       this.setState({connectedGun,
                     gunConnected: false})
       this.saveGunConnection(this.state);
@@ -201,13 +223,7 @@ export default class GunStatusDesplay extends Component {
     this.props.updateConStatus(this.state.gunConnected);
   }
 
-  handleUpdateValueForCharacteristic(data) {
-    const command = bytesToString(data.value);
-    this.handleGunCommand(command);
-    //console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
-  }
-
-  handleStopScan() {
+  gunStatusHandleStopScan() {
     console.log('Scan is stopped');
     this.setState({ scanning: false });
     if (this.state.searchID != null && this.state.foundMatch == false){
@@ -216,39 +232,18 @@ export default class GunStatusDesplay extends Component {
     }
   }
 
-  handleGunCommand (command) {
-    console.log("handling command",command)
+
+  gunStatusHandleDiscoverPeripheral(peripheral){
+    //console.log('Got ble peripheral', peripheral);
+    if (!this.state.discoveredP){
+        this.setState({discoveredP: true});
+      }
+    if (!peripheral.name || peripheral.name != "TULGN") {
+    //console.log("Not gun");
+    return;
+    }
   }
 
-  handleDiscoverPeripheral(peripheral){
-    //var peripherals = this.state.peripherals;
-    //console.log('Got ble peripheral', peripheral);
-    this.setState({discoveredP: true});
-    if (!peripheral.name) {
-      peripheral.name = 'NO NAME';
-      return;
-    }
-    if (this.state.searchID != null){ // Searching For specific gun
-      let pService = peripheral.advertising.serviceUUIDs[0]
-      let serviceTag = pService.slice(-6);
-      console.log(serviceTag);
-      if (serviceTag == this.state.searchID){
-        this.setState({foundMatch: true})
-        this.attemptGunConnection(peripheral)
-      }
-    }
-    //peripherals.set(peripheral.id, peripheral);
-    //this.setState({ peripherals });
-  }
-  editGamePin = gamePin => {
-    this.setState({ gamePin });
-  };
-  searchForGame = () => {
-    console.log(this.state.gamePin)
-    console.log("Searching for game");
-    //this.startScan();
-    
-  }
   retrieveConnected(){
     BleManager.getConnectedPeripherals([]).then((results) => {
       if (results.length == 0) {
@@ -260,15 +255,31 @@ export default class GunStatusDesplay extends Component {
   }
 
   checkGunConnection(){
+    if (this.state.connectedGun == null){
+    console.log("Gun connection bad");
+    this.setState({gunConnected: false});
+    return false;
+    }
     gunID = this.state.connectedGun.id;
     console.log("Checking if connected gun");
+    const updateListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
     BleManager.isPeripheralConnected(gunID, []) // Possibly add gunService uuid in to array
       .then((isConnected) => {
         if (isConnected) {
           console.log('Peripheral IS connected!');
           this.setState({gunConnected: true})
+            if (updateListeners.length == 0 ){
+                console.log("Connected and have no Listeneres",updateListeners)
+            } else{
+                console.log("connecgted and has listners'",updateListeners)
+            }
         } else {
           console.log('Gun is NOT connected!');
+          if (updateListeners.length == 0 ){
+            console.log("Not connected and have no Listeneres",updateListeners)
+            } else{
+                console.log("Not con and has listeners'",updateListeners)
+            }
           this.setState({gunConnected: false});
         }
         this.props.updateConStatus(this.state.gunConnected);
