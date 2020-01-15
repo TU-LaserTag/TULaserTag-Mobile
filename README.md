@@ -23,3 +23,6 @@ ID UUID?:
 
 Expected UUID:
 206AC814-ED0B-4204-BD82-246F28A83FCE
+
+useful link: REquest fgails:
+https://stackoverflow.com/questions/29901315/react-native-fetch-request-fails
