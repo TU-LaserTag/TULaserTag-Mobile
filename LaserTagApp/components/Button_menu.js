@@ -1,20 +1,46 @@
 import React, { Component } from 'react';
-import { StyleSheet, Text, View, AppRegistry, Image, TouchableOpacity, ScrollView } from 'react-native';
-import MenuItem from './Menu_item'
-import { Container, Header, Content, Card, CardItem, Body, Right, Button, Left} from 'native-base';
+import { StyleSheet, View } from 'react-native';
 import Icon from 'react-native-vector-icons/AntDesign';
+import LaserTheme from './Custom_theme'
+import {Content } from 'native-base';
+import { Text, ThemeProvider, Button, Card, Image, ListItem} from 'react-native-elements';
+import AppImages from "../assets/index"
 
 export default class ButtonMenu extends Component{
     renderItem = (text, i) => {
         const {onPressItem} = this.props
-        //{console.log("Rendering",text,i)}
-        const iconMap = ['link','earth','plussquareo']
+        {console.log("Rendering",text,i)}
+        const iconMap = ['link','earth','plussquareo'] // Maybe remove Icons in future 
+        const imageMap = [AppImages['manage'],AppImages['join'],AppImages['host']] // TODO: Replace these
+        const descriptionMap = ['Connect, disconnect, or manage laser gun','View public games or search for private games','Create and edit settings for a game'] // Maybe remove Icons in future
+        console.log("Rendering")
         return ( 
-                <Button raised={true} full iconLeft primary key={i} style = {styles.button} onPress={ () => onPressItem(i)}>
-                <Icon name={iconMap[i]}/>
-               
-                <Text style = {styles.buttonText} key={i}> {text}</Text>
+            <Content>
+                <Card
+                    title={text}
+                    image={<Image 
+                                source = { imageMap[i]}
+                                style = {{ width: 200, height: 200}}
+                    
+                            />}>
+                    <Text style={{marginBottom: 10}}>
+                        {descriptionMap[i]}
+                    </Text>
+                
+                <Button 
+                icon={
+                    <Icon
+                    name = {iconMap[i]}
+                    size=  {15}
+                    color= "white"
+                    type = 'antDesign'
+                    />}
+                title= {text}
+                onPress={ () => onPressItem(i)}>
                 </Button>
+                </Card>
+                </Content>
+               
             
         )
     }
@@ -22,22 +48,24 @@ export default class ButtonMenu extends Component{
     render(){
         const {menuOptions} = this.props
         return (
+            <ThemeProvider theme={LaserTheme}>
             <View style= {styles.MenuStyle}>
                 {menuOptions.map(this.renderItem)}
             </View>
+            </ThemeProvider>
         )
     }
 }
 
 const styles = StyleSheet.create({
     MenuStyle: {
-        //flex: 10,
+        flex: 10,
         flexDirection: 'column',  
         marginTop: 20,
         marginBottom: 20,
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        backgroundColor: 'gray',
+        backgroundColor: 'white',
     },  
     button: {
         marginTop: 10,
