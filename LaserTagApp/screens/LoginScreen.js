@@ -63,7 +63,7 @@ export default class LoginScreen extends Component {
       console.log(err.message);
       switch (err.name) {
         case 'NotFoundError':
-          console.log((" Nodata"))
+          console.log((" Nodata"));
           break;
         case 'ExpiredError':
           // TODO
@@ -96,8 +96,8 @@ export default class LoginScreen extends Component {
           role: "user",
           pass: this.state.pass
         }
-        this.loggedIn(loginData)
-        this.props.navigation.navigate("Home");
+        this.loggedIn(loginData);
+        this.props.navigation.navigate("Home",{loginData: loginData});
       }
     };
 
@@ -216,6 +216,9 @@ export default class LoginScreen extends Component {
               onChangeText={this.editPassword}
             />
             <Button 
+              style = {{
+                marginTop: 3
+              }}
               title= 'Login'
               onPress={() => this.loginPressed()}
               />

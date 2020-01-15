@@ -19,7 +19,6 @@ export default class CustomHeader extends Component {
   logout = () => {
     // Erase/reset session data
     this.props.navigation.navigate("Login")
-    console.log("Logging out");
   }
   goSettings = () => {
     console.log("opening settings")
@@ -27,17 +26,17 @@ export default class CustomHeader extends Component {
   goBack = () => {
     this.props.navigation.goBack()
   }
-  
+  refresh = () =>{
+    this.props.refresh();
+  }
 
   getHeader = () => { 
     const type = this.props.headerType
-    
-    console.log("getting header",type)
     if (type == "login"){
       return (
         <Header>
         <Text></Text>
-        <Title><Text>{this.props.headerText}</Text></Title>
+        <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
         <Icon name='user-plus' type='feather' color='white' onPress={() => this.goSignup()} />
         
       </Header>)
@@ -45,15 +44,15 @@ export default class CustomHeader extends Component {
       return (
         <Header>
         <Text></Text>
-        <Title><Text>{this.props.headerText}</Text></Title>
-        <Icon name='login' type='feather' color='white' onPress={() => this.goLogin()} />
+        <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
+        <Icon name='log-in' type='feather' color='white' onPress={() => this.goLogin()} />
       </Header>
       )
     } else if (type == "home") {
       return (
         <Header>
         <Icon name='settings' type='feather' color='white' onPress={() => this.goSettings()} />
-        <Title><Text>{this.props.headerText}</Text></Title>
+        <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
         <Icon name='log-out' type='feather' color='white' onPress={() => this.logout()} />
       </Header>
       )
@@ -61,7 +60,7 @@ export default class CustomHeader extends Component {
       return (
         <Header>
         <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
-        <Title><Text>{this.props.headerText}</Text></Title>
+        <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
         <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
       </Header>
       )
@@ -69,7 +68,15 @@ export default class CustomHeader extends Component {
     return (
       <Header>
       <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
-      <Title><Text>{this.props.headerText}</Text></Title>
+      <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
+      <Icon name='refresh' type='ion' color='white' onPress={() => this.refresh()} />
+    </Header>
+    )
+  } else if (type == "host") {
+    return (
+      <Header>
+      <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
+      <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
       <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
     </Header>
     )

@@ -185,6 +185,9 @@ export default class SignupScreen extends Component {
               onChangeText={this.editConfirmPass}
             />
             <Button 
+              style = {{
+                marginTop: 3
+              }}
               title= 'Sign Up'
               onPress={() => this.signupPressed()}
               />
@@ -193,25 +196,3 @@ export default class SignupScreen extends Component {
           );
         }
       }
-  
-      
-  const styles = StyleSheet.create({
-    header: {
-      //flex:1,
-      top: 0, 
-      alignItems: 'center',
-      marginBottom:1
-    },
-    title: {
-      textAlign: 'center',
-      color: '#1E0F2A',
-      fontSize: 19,
-      fontWeight: 'bold'
-    },
-    cas: {
-      textAlign: 'center',
-      color: '#1E0F2A',
-      fontSize: 15,
-      fontWeight: 'bold'
-    },
-  })

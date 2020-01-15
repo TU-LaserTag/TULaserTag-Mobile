@@ -1,6 +1,8 @@
 import { ThemeProvider} from 'react-native-elements';
-
-
+// Color pallet
+//#ae936c gold-brown
+//#61578b -- Default Purple
+//#209cee -- Main Blue
 export const LaserTheme = {
     Button: {
       raised: true,
@@ -8,14 +10,22 @@ export const LaserTheme = {
         color: 'white',
       },
       buttonStyle: {
-        backgroundColor: 'blue',
+        backgroundColor: '#209cee',
+        // Types of bluues
+        //#00aeef
+        //#6ecff6
+        //#209cee -- Main blue
       }
     },
     Container: {
-        backgroundColor: 'black'
+        backgroundColor: '#ae936c'
     },
     Header:{
-        backgroundColor:'purple'
+        backgroundColor:'#61578b'
+        // Types of purples:
+        //#61578b -- Default
+        //#4d2c4c
+        //#5a3358
     },
     Input:{
         errorStyle:{

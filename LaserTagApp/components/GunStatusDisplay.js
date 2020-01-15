@@ -18,6 +18,7 @@ import BleManager, { connect } from 'react-native-ble-manager';
 import { LaserTheme } from './Custom_theme';
 import { stringToBytes, bytesToString } from 'convert-string';
 import { TapGestureHandler } from 'react-native-gesture-handler';
+import { Container } from 'native-base';
 const window = Dimensions.get('window');
 
 const BleManagerModule = NativeModules.BleManager;
@@ -324,14 +325,16 @@ export default class GunStatusDesplay extends Component {
         //const gunName = myGun.name + ': ' + serviceTag;
         const statusColor = this.state.gunConnected? '#99ff99' : 'red'; 
         return(
+            <View style= {{backgroundColor: 'gray'}}>
             <Text style={{
                 fontSize: 22,
-                margin: 10,
+                margin: 5,
                 backgroundColor: statusColor,
                 textAlign: 'center'
             }} onPress={() => this.gotoGunScreen() }>
                 {this.state.gunConnected ? 'Gun Connected' : 'Gun Disconnected'}
             </Text>
+            </View>
         );
     }
     

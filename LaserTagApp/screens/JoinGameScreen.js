@@ -8,7 +8,7 @@ import CustomHeader from '../components/CustomHeader';
 import GunStatusDisplay from '../components/GunStatusDisplay'
 import { stringToBytes, bytesToString } from 'convert-string';
 import BleManager, { connect } from 'react-native-ble-manager';
-
+import {Web_Urls} from '../constants/webUrls';
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
@@ -31,7 +31,7 @@ export default class JoinGameScreen extends Component {
       loading: true,
       gameList: [],
       joinGameError: false,
-      gameListHeader: 'Showing Public Games',
+      gameListHeader: '',
       seachMode: 'public',
     }
     //console.log("construct");
@@ -194,144 +194,59 @@ export default class JoinGameScreen extends Component {
       
     };
   
-      requestGames() {
+      requestGames() { // Request all games
         this.setState({loading: true,
+                        gameList: [],
                         searchMode: 'public',
-                        gameListHeader: "Showing Public: "
+                        gameListHeader: "Public Games: "
         })
-        var getURL = "Https://tuschedulealerts.com/game"
+        var getURL = Web_Urls.Host_Url + "/game"
         console.log("Sending request to ",getURL)
-        /*fetch(getURL,{ 
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+        var request = new XMLHttpRequest();
+          request.onreadystatechange = (e) => {
+            if (request.readyState !== 4) {
+              return;
+            }
+            if (request.status === 200) {
+              responseList = JSON.parse(request.response);
+              this.handleGameListResponse(responseList);
+            } else {
+              // Needs more error handling
+              this.setState({joinGameError: "Could not connect to server, Please try again later",
+                            loading: false});     
+            }
           }
-        })
-        .then(this.handleResponse)
-        .then(this.parseResponse)
-        .catch((error) => {console.log("OOF:"); console.error(error);});*/
-        const dummyGameData1 = {
-          id: 0,
-          starttime: '08:19:30',
-          endtime: '10:19:30',
-          maxammo: -1,
-          style: 'team',
-          timedisabled: 0,
-          maxLives: 2,
-          pause: 'f',
-          winners: null,
-          date: '01-14-2020',
-          code: "",
-          num_teams: 2,
-          players_alive: null,
-          team_selection: 'automatic',
-          teams_alive: null,
-          locked: 'f',
-          name: 'Solo Shootout',
-          host: 'NurkBook'
-        }
-        const dummyGameData2 = {
-          id: 1,
-          starttime: '10:19:30',
-          endtime: '14:19:30',
-          maxammo: 50294,
-          style: 'solo',
-          timedisabled: 40,
-          maxLives: 3,
-          pause: 'f',
-          winners: null,
-          date: '01-14-2020',
-          code: "",
-          num_teams: 2,
-          players_alive: null,
-          team_selection: 'manual',
-          teams_alive: null,
-          locked: 'f',
-          name: 'Biggus Trickus',
-          host: 'BoopMaster'
-        }
-        
-        const gameDataList = {
-          ok: true, 
-          gameList: [
-                    dummyGameData1,
-                    dummyGameData2
-                    ]
-        }
-        this.handleGameListResponse(gameDataList);
+          request.open('GET', getURL);
+          request.send();
       }
 
-      searchPrivateGames() {
+      requestPrivateGames() { // Request private game(s) accoring to key
         const searchKey = this.state.key;
         this.setState({
           loading: true,
           gameList: [],
           searchMode: 'private',
-          gameListHeader: "Showing Private Games Matching: "+searchKey
+          gameListHeader: "Private Games: "+searchKey
         });
-        console.log("searching for",searchKey);
-        var getURL = "Https://tuschedulealerts.com/game/code/" + searchKey
+        var getURL = Web_Urls.Host_Url +"/game/code/" + searchKey
         console.log("Sending request to ",getURL)
 
-        /*fetch(getURL,{ 
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+        var request = new XMLHttpRequest();
+          request.onreadystatechange = (e) => {
+            if (request.readyState !== 4) {
+              return;
+            }
+            if (request.status === 200) {
+              responseList = JSON.parse(request.response);
+              this.handleGameListResponse(responseList);
+            } else {
+              // Do more error handling here
+              this.setState({joinGameError: "Could not connect to server, Please try again later",
+                            loading: false});     
+            }
           }
-        })
-        .then(this.handleResponse)
-        .then(this.parseResponse)
-        .catch((error) => {console.log("OOF:"); console.error(error);});*/
-        const dummyGameData1 = {
-          id: 0,
-          starttime: '08:19:30',
-          endtime: '10:19:30',
-          maxammo: -1,
-          style: 'team',
-          timedisabled: 0,
-          maxLives: 2,
-          pause: 'f',
-          winners: null,
-          date: '01-14-2020',
-          code: "privatge",
-          num_teams: 2,
-          players_alive: null,
-          team_selection: 'automatic',
-          teams_alive: null,
-          locked: 'f',
-          name: 'Solo Shootout',
-          host: 'NurkBook'
-        }
-        const dummyGameData2 = {
-          id: 1,
-          starttime: '10:19:30',
-          endtime: '14:19:30',
-          maxammo: 50294,
-          style: 'solo',
-          timedisabled: 40,
-          maxLives: 3,
-          pause: 'f',
-          winners: null,
-          date: '01-14-2020',
-          code: "private",
-          num_teams: 2,
-          players_alive: null,
-          team_selection: 'manual',
-          teams_alive: null,
-          locked: 'f',
-          name: 'Biggus Trickus',
-          host: 'BoopMaster'
-        }
-        const gameDataList = {
-          ok: true, 
-          gameList: [
-                    dummyGameData1,
-                    dummyGameData2
-                    ]
-        }
-        this.handleGameListResponse(gameDataList)
+          request.open('GET', getURL);
+          request.send();
       }
     
       requestJoin(){
@@ -346,54 +261,39 @@ export default class JoinGameScreen extends Component {
             'Content-Type': 'application/json',
           }
         })
-        .then(this.handleResponse(response))
-        .then(this.parseResponse)
+        .then(handleGameListResponse)
         .catch((error) => {console.log("OOF:"); console.error(error);});
       }
 
-      
-    
 
-      handleGameListResponse = (response)=> {
-        this.setState({loading: false})
-        if (response.ok){
-          // If data - no data or no type
-          //display error on screen
-          if (response == "error"){
-            console.warn("error in data")
-            return "error"
-          }else{
-              const gameList = response.gameList;
-              console.log("Setting game List",gameList)
-              this.setState({gameList});
-          } // Happy path
-  
+      handleGameListResponse(response) {
+        const gameList = response
+        if (gameList.length < 1){
+          this.setState({joinGameError: "No Games Found",
+                        loading: false});     
         } else{
-          //console.log(response)
-          
-          throw new Error ('Data retrieval Fail',response.error)
-        }
+        //console.log("Setting game List",gameList)
+          this.setState({gameList: response,   
+                        loading: false,
+                        joinGameError: ""});
+          }            
       }
     
-      parseResponse = data => {
-        //console.log("parsing data",data)
-        if (data == "error"){
-          console.log("nooo")
-          this.setState({chemData: "Something Went wrong"})
-        }
-         else if (data == "noData"){
-          console.log("no data found")
-        }
-        else if (data == "notType"){
-          console.log("Input type not recognized")
-        }
-        else{
-          this.setState({errorStat: [false,"loading"]})
-          var data = JSON.parse(data)            
-        }
-      }
       switchSearchMode = () => {
-        console.log("Switching search mode to:");
+        newMode =  ((this.state.searchMode == 'private') ? 'public' : 'private');
+        this.setState({searchMode: newMode});
+        this.refresh();
+      }
+
+      refresh = () => {
+        mode =  this.state.searchMode;
+        if (mode == 'public'){
+          this.requestGames();
+        } else{
+          if (!this.getKeyStatus()){
+            this.requestPrivateGames()
+          }
+        }
       }
       getGameStatus = () => {
         if (this.state.key == "") {
@@ -409,7 +309,8 @@ export default class JoinGameScreen extends Component {
           return false;
         }
       }
-      keyExtractor = (item, index) => index.toString();
+      keyExtractor = (item, index) => {
+      }
       renderGameList = () => {
         const gameList = this.state.gameList;
         if (gameList == undefined){
@@ -434,7 +335,7 @@ export default class JoinGameScreen extends Component {
         } else{
           if (gameList.length == 0){
             return (
-              <Text>No Public Games Availible</Text>
+                  <Text></Text>
             )
 
           } else{
@@ -458,29 +359,30 @@ export default class JoinGameScreen extends Component {
           return 
         }
       }
-        rendergameListHeader = () => {
-          const headerText = this.state.gameListHeader;
-          let searchIcon = '';
-          let searchType = '';
-          if (this.state.seachMode == 'public'){
-            searchIcon = 'earth'
-            searchType = 'antdesign'
-          } else if (this.state.searchMode == 'private'){
-            searchIcon = 'key'
-            searchType = 'entypo'
-          }
-          return (
-              <ListItem
-                containerStyle = {{
-                  backgroundColor: 'gray',
-                  margin: 0
-                }}
-                onPress={() => this.switchSearchMode()}
-                title={headerText}
-                leftIcon={{ name: searchIcon, type: searchType }}
-                bottomDivider
-              />
-            )    
+      rendergameListHeader = () => {
+        const searchMode = this.state.searchMode
+        const headerText = this.state.gameListHeader;
+        let searchIcon = '';
+        let searchType = '';
+        if (searchMode == 'public'){
+          searchIcon = 'earth'
+          searchType = 'antdesign'
+        } else{
+          searchIcon = 'key'
+          searchType = 'entypo'
+        }
+        return (
+            <ListItem
+              containerStyle = {{
+                backgroundColor: 'gray',
+                margin: 0
+              }}
+              onPress={() => this.switchSearchMode()}
+              title={headerText}
+              leftIcon={{ name: searchIcon, type: searchType }}
+              bottomDivider
+            />
+          )    
       }
       renderGame= ({ item }) => {
         let gameStartDate = Date(item.date + ' ' +item.starttime);
@@ -488,8 +390,8 @@ export default class JoinGameScreen extends Component {
         let startDate = gameStartDate.toString().slice(0,16);
         let gameStartTime = gameStartDate.toString().slice(16,24);
         let gameEndTime = gameEndDate.toString().slice(16,24);
-        console.log("gameDates: ",gameStartDate,gameEndDate);
-        console.log("StartIme",gameStartTime,'-',gameEndTime);
+        //console.log("gameDates: ",gameStartDate,gameEndDate);
+        //console.log("StartIme",gameStartTime,'-',gameEndTime);
         const gameTimeStamp = startDate + gameStartTime + ' - ' + gameEndTime;
         const gameHost= item.host;
         const gameStyle = item.style;
@@ -537,8 +439,8 @@ export default class JoinGameScreen extends Component {
       }
       render() {
         return(
-          <ThemeProvider {...this.props} theme={LaserTheme}>
-           <CustomHeader {...this.props} headerText= "Join Game" headerType = "join" />
+          <ThemeProvider {...this.props}  theme={LaserTheme}>
+           <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Join Game" headerType = "join" />
             <GunStatusDisplay updateConStatus = {this.updateConnectionStatus}></GunStatusDisplay>
             <Input
               placeholder='Game Key (optional)'
@@ -549,11 +451,11 @@ export default class JoinGameScreen extends Component {
               onChangeText={this.editGamekey}
             />
             <Button style= {{size: 4}}
-              title= "Serch Private Games"
+              title= "Search Private Games"
               disabled = {this.getKeyStatus()}
-              onPress={() => this.searchPrivateGames()}
+              onPress={() => this.requestPrivateGames()}
               />
-            <Divider style={{ backgroundColor: 'gray' , paddingTop: 5}} />
+            
             {this.rendergameListHeader()}
             {this.renderJoinError()}
             {this.renderGameList()}

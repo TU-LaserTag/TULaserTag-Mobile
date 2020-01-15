@@ -16,8 +16,9 @@ export default class HomeScreen extends Component {
   };
  state = {
   menuOptions: ["Manage Gun","Join Game", "Host Game"],
-  menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Server Communication', value: "Server"}]
- }
+  menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Host Game', value: "Host"}],
+  loginData: this.props.navigation.getParam("loginData", '')
+}
 
  onMenuPress = (menuVal) => {
   const menuTranslater = this.state.menuTranslater
@@ -29,6 +30,23 @@ export default class HomeScreen extends Component {
   this.props.navigation.navigate(optVal)
 }
 
+renderWelcome(){
+  const username = this.state.loginData.username
+  return (
+    <Text 
+      style={{
+      color: 'white',
+      fontSize: 18,
+      margin: 0,
+      backgroundColor: 'black',
+      textAlign: 'center'
+      }}
+       >
+      Welcome Back, {username}!
+  </Text>
+  )
+}
+
   render() {
     const {menuOptions} = this.state
     const dimensions = Dimensions.get('window');
@@ -37,13 +55,13 @@ export default class HomeScreen extends Component {
     return (
       <ThemeProvider theme={LaserTheme}>
        <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
-                 
-        <Content>
+        {this.renderWelcome()}
+        <Container style= {{backgroundColor: 'gray'}}>
         <ButtonMenu 
               menuOptions = {menuOptions}
               onPressItem = {this.onMenuPress}
         />
-        </Content>
+        </Container>
         <Footer>
           <FooterTab>
             <Button full>

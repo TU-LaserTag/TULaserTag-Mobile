@@ -10,7 +10,7 @@ export default class ButtonMenu extends Component{
         //{console.log("Rendering",text,i)}
         const iconMap = ['link','earth','plussquareo']
         return ( 
-                <Button full iconLeft primary key={i} style = {styles.button} onPress={ () => onPressItem(i)}>
+                <Button raised={true} full iconLeft primary key={i} style = {styles.button} onPress={ () => onPressItem(i)}>
                 <Icon name={iconMap[i]}/>
                
                 <Text style = {styles.buttonText} key={i}> {text}</Text>
@@ -37,20 +37,20 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        backgroundColor: 'black',
+        backgroundColor: 'gray',
     },  
     button: {
         marginTop: 10,
         marginBottom: 30,
         alignItems: "center",
         justifyContent: 'center',
-        backgroundColor: '#ADD8E6',
-        borderRadius: 0, // 0-50
+        backgroundColor: 'purple',
+        borderRadius: 20, // 0-50
         borderColor: 'white'
     },
     buttonText: {
-        color: 'darkblue',
-        fontSize: 20
+        color: 'white',
+        fontSize: 24
     }
   
   });
