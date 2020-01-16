@@ -216,7 +216,7 @@ export default class BluetoothManager extends Component {
     if (updateListeners.length > 0){
       this.handlerUpdate.remove('BleManagerDidUpdateValueForCharacteristic');
     }
-    
+    AppState.removeEventListener('change',this.handleAppStateChange)
   }
 
   handleAppStateChange(nextAppState) {
@@ -480,6 +480,7 @@ toggleGunConnection(peripheral) {
           this.setState({connectedGun: peripheral})
           console.log('Connected to ' + peripheral.id);
           //console.log("State",this.state.connectedGun);
+          this.setState({connectionError: ''})
           this.saveGunConnection(this.state);
           // SubScribe to notification
           BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
@@ -493,12 +494,17 @@ toggleGunConnection(peripheral) {
               //});
             }).catch((error) => {
               console.warn("Notification error",error);
+              this.setState({connectionError: 'Problems communicating with gun'})
             });
           }).catch((error) => {
             console.warn("Retrieve service error",error);
+            this.setState({connectionError: 'Problems communicating with gun'})
+
           });
         }).catch((error) => {
         console.log('Connection error', error);
+        this.setState({connectionError: 'Could not connect to gun'})
+
       });
     }
   }

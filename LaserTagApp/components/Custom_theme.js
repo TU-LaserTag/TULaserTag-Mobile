@@ -3,6 +3,7 @@ import { ThemeProvider} from 'react-native-elements';
 //#ae936c gold-brown
 //#61578b -- Default Purple
 //#209cee -- Main Blue
+// #4a4a4a TExt colot
 export const LaserTheme = {
     Button: {
       raised: true,

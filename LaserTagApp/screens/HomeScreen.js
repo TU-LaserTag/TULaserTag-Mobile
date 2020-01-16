@@ -17,7 +17,32 @@ export default class HomeScreen extends Component {
   menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Host Game', value: "Host"}],
   loginData: this.props.navigation.getParam("loginData", '')
 }
+componentDidMount() {
+  console.log("HomeScreenMoubnt");
+  //AppState.addEventListener('change', this.handleAppStateChange);
 
+  //const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+  //const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+  //const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+  //const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+
+  //if (discoverListeners.length <= 1) {
+  //    console.log("added discover listener");
+   //   this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
+  //}
+  //if (stopListeners.length <= 1) {
+    //console.log("added stop listener");
+   // this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan );
+  //}
+  //if (disconnectListeners.length <= 1) {
+   // console.log("added disconnect listener");
+  //  this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral );
+  //}
+  //if (updateListeners.length <= 1) {
+    //console.log("added updateListener");
+    //this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
+  //}
+}
  onMenuPress = (menuVal) => {
   const menuTranslater = this.state.menuTranslater
   let optDic = menuTranslater[menuVal]

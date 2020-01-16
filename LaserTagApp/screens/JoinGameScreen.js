@@ -239,7 +239,7 @@ export default class JoinGameScreen extends Component {
               responseList = JSON.parse(request.response);
               this.handleGameListResponse(responseList);
             } else {
-              // Do more error handling here
+              console.log("Error",request)
               this.setState({joinGameError: "Could not connect to server, Please try again later",
                             loading: false});     
             }
@@ -267,6 +267,7 @@ export default class JoinGameScreen extends Component {
 
       handleGameListResponse(response) {
         const gameList = response
+        console.log("Handling",response)
         if (gameList.length < 1){
           this.setState({joinGameError: "No Games Found",
                         loading: false});     
