@@ -13,11 +13,18 @@ const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
 
 
-export default class JoinGameScreen extends Component {
+export default class GameLobbyScreen extends Component {
   static navigationOptions = {
-    title: 'Join Game', // Possibly have it dynamic to name
+    title: 'Game lobby', // Where all players will hang out before game starts
   };
-
+/**
+ * Data to Load:
+ * players: /players/{gameID} -- All players assigned to game
+ * teams: /teams/{gameID} -- Teams and playerUsername list within team
+ * All TEams: /team -- All teams 
+ * userData: (Internal) -- Username
+ * gameData: /game/{gameID}/{username}/{gunID} -- Game data, user data
+ */
   constructor(){
     super()
     this.state = {
@@ -27,24 +34,25 @@ export default class JoinGameScreen extends Component {
       connectedGun: null,
       keyError: '',
       discoveredP: false,
-      loading: true,
-      gameList: [],
-      joinGameError: false,
-      gameListHeader: '',
+      loading: true,     
       seachMode: 'public',
+      gameData: null,
+      userData: null,
+      memberList: undefined
     }
     //console.log("construct");
-    //this.checkBLE(); Should get ran in GunStatusDisplay
-    this.loadStorage()  // Checks storage and then builds upon startBLEManager
+    //this.loadStorage()  // CCan load storage but really not nexessary for now
     
-    this.joinGameHandleDiscoverPeripheral = this.joinGameHandleDiscoverPeripheral.bind(this);
-    this.joinGameHandleStopScan = this.joinGameHandleStopScan.bind(this);
-    this.joinGameHandleUpdateValueForCharacteristic = this.joinGameHandleUpdateValueForCharacteristic.bind(this);
-    this.joinGameHandleDisconnectedPeripheral = this.joinGameHandleDisconnectedPeripheral.bind(this);
-    this.joinGameHandleAppStateChange = this.joinGameHandleAppStateChange.bind(this);
+    this.gameLobbyHandleDiscoverPeripheral = this.gameLobbyHandleDiscoverPeripheral.bind(this);
+    this.gameLobbyHandleStopScan = this.gameLobbyHandleStopScan.bind(this);
+    this.gameLobbyHandleUpdateValueForCharacteristic = this.gameLobbyHandleUpdateValueForCharacteristic.bind(this);
+    this.gameLobbyHandleDisconnectedPeripheral = this.gameLobbyHandleDisconnectedPeripheral.bind(this);
+    this.gameLobbyHandleAppStateChange = this.gameLobbyHandleAppStateChange.bind(this);
+
   }
+  
   loadStorage = () => {
-    console.log("loading storage");
+    console.log("loading storage"); // Necessary?
     global.storage.load ({
     key: 'gunData',
     autoSync: true,
@@ -72,84 +80,86 @@ export default class JoinGameScreen extends Component {
       }
     });
   }
-    updateConnectionStatus(data){
-      console.log("Updating Connection Status",data);
-    }
-    
+    // Host functions
     editGamekey = key => {
       this.setState({ key });
     };
-    componentDidMount(){
-        console.log("Join Game Mount")
-        AppState.addEventListener('change', this.joinGameHandleAppStateChange);
-        //const data = this.props.navigation.getParam("varName", "None") or else none
-        const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-        const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-        const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-        const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
 
-        if (discoverListeners.length <= 1) {
-            console.log("Joinscreen discover listener");
-            this.joinGameHandlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.joinGameHandleDiscoverPeripheral );
-        }
-        if (stopListeners.length <= 1) {
-          console.log("Joinscreen Stop listener");
-          this.joinGameHandlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.joinGameHandleStopScan );
-        }
-        if (disconnectListeners.length <= 1) {
-          console.log("JoinScreen disconnect listener");
-          this.joinGameHandlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.joinGameHandleDisconnectedPeripheral );
-        }
-        if (updateListeners.length <= 1) {
-          console.log("JoinScreen updateListener");
-          this.joinGameHandlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.joinGameHandleUpdateValueForCharacteristic );
-        }
-        // Temporarily here to test Game display functionality
-        this.requestGames();
+    componentDidMount(){
+      const userData = this.props.navigation.getParam("userData", null);
+      const gameData = this.props.navigation.getParam("gameData", null);
+      this.setState({userData});
+      this.setState({gameData});
+      console.log("Lobyy Mounted")
+      /*AppState.addEventListener('change', this.gameLobbyHandleAppStateChange);
+      //const data = this.props.navigation.getParam("varName", "None") or else none
+      const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+      const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+      const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+      const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+
+      if (discoverListeners.length <= 1) {
+          console.log("Joinscreen discover listener");
+          this.gameLobbyHandlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.gameLobbyHandleDiscoverPeripheral );
+      }
+      if (stopListeners.length <= 1) {
+        console.log("Joinscreen Stop listener");
+        this.gameLobbyHandlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.gameLobbyHandleStopScan );
+      }
+      if (disconnectListeners.length <= 1) {
+        console.log("JoinScreen disconnect listener");
+        this.gameLobbyHandlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.gameLobbyHandleDisconnectedPeripheral );
+      }
+      if (updateListeners.length <= 1) {
+        console.log("JoinScreen updateListener");
+        this.jgameLobbyHandlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.jgameLobbyHandleUpdateValueForCharacteristic );
+      }*/
+      console.log("Loading gameData",gameData)
+      this.loadGameData(gameData.game_id); // Maybe move to constructor?
         
     } 
 
     componentWillUnmount() { // cancel all async tasks herere? Appstate change?
       console.log("unmouting JoinScreen status");
-      var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+     /* var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
       var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
       var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
       var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
       console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
   
       if (discoverListeners.length > 0){
-          this.joinGameHandlerDiscover.remove('BleManagerDiscoverPeripheral');
+          this.gameLobbyHandlerDiscover.remove('BleManagerDiscoverPeripheral');
       }
       if (stopListeners.length >0){
-        this.joinGameHandlerStop.remove('BleManagerStopScan');
+        this.gameLobbyHandlerStop.remove('BleManagerStopScan');
       }
       if (disconnectListeners.length > 0){
-        this.joinGameHandlerDisconnect.remove('BleManagerDisconnectPeripheral');
+        this.gameLobbyHandlerDisconnect.remove('BleManagerDisconnectPeripheral');
       }
       if (updateListeners.length > 0){
-        this.joinGameHandlerUpdate.remove('BleManagerDidUpdateValueForCharacteristic');
-      }
+        this.gameLobbyHandlerUpdate.remove('BleManagerDidUpdateValueForCharacteristic');
+      }*/
     }
 
     // Handlers
-    joinGameHandleDisconnectedPeripheral(gun) {
+    gameLobbyHandleDisconnectedPeripheral(gun) {
       let connectedGun = this.state.connectedGun;
       if (connectedGun.id == gun.peripheral) { 
         connectedGun.connected = false;
         this.setState({connectedGun})
         this.saveGunConnection(this.state);
       }
-      console.log('JoinGame Disconnected from ' + gun.peripheral);
+      console.log('gameLobby Disconnected from ' + gun.peripheral);
     }
   
-    joinGameHandleUpdateValueForCharacteristic(data) {
+    gameLobbyHandleUpdateValueForCharacteristic(data) {
       const command = bytesToString(data.value);
-      this.joinGameHandleGunCommand(command);
+      this.gameLobbyHandleGunCommand(command);
       //console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
     }
   
-    joinGameHandleStopScan() {
-      console.log('Joingame Scan is stopped');
+    gameLobbyHandleStopScan() {
+      console.log('gameLobby Scan is stopped');
       this.setState({ scanning: false });
       if (this.state.searchID != null && this.state.foundMatch == false){
         console.log("No matching gun found")
@@ -157,11 +167,11 @@ export default class JoinGameScreen extends Component {
       }
     }
   
-    joinGameHandleGunCommand (command) {
+    gameLobbyHandleGunCommand (command) {
       console.log("Join Game handling command",command)
     }
   
-    joinGameHandleDiscoverPeripheral(peripheral){
+    gameLobbyHandleDiscoverPeripheral(peripheral){
       if (!this.state.discoveredP){
         this.setState({discoveredP: true});
       }
@@ -170,30 +180,15 @@ export default class JoinGameScreen extends Component {
       }
       
     }
-
-
-    joinGameHandleAppStateChange(nextAppState) {
+    gameLobbyHandleAppStateChange(nextAppState) {
       if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('JoinGame Screen has come to the foreground!')
+        console.log('gameLobby Screen has come to the foreground!')
       }
       this.setState({appState: nextAppState});
     }
 
-    joinPressed = (game) => {
-      console.log("Tying to join",game);
-      if (!this.state.gunConnected){
-        console.log("Gun not connected")
-        this.setState({joinGameError: "Connect to gun before joining game"});
-        return;
-      } else{ // any other error/game validateion
-
-      }
-      // Finally attempt to join the game
-        this.requestJoin(game);
-      
-    };
   
-      requestGames() { // Request all games
+      loadGameData() { // Request all games (Game Id)
         this.setState({loading: true,
                         gameList: [],
                         searchMode: 'public',
@@ -325,7 +320,7 @@ export default class JoinGameScreen extends Component {
         const gameList = this.state.gameList;
         if (gameList == undefined){
           return (
-            <ActivityIndicator size="large" color="#61578b"
+            <ActivityIndicator size="large" color="#0000ff"
             style = {{
               paddingTop: 30,
               justifyContent: 'center', 
@@ -335,7 +330,7 @@ export default class JoinGameScreen extends Component {
         }
         if (this.state.loading == true){
           return (
-            <ActivityIndicator size="large" color="#61578b"
+            <ActivityIndicator size="large" color="#0000ff"
             style = {{
               paddingTop: 30,
               justifyContent: 'center', 
@@ -394,38 +389,35 @@ export default class JoinGameScreen extends Component {
             />
           )    
       }
-      renderGame= ({ item }) => {
-        let gameStartDate = Date(item.date + ' ' +item.starttime);
-        let gameEndDate = Date(item.date + ' ' +item.endtime);
-        let startDate = gameStartDate.toString().slice(0,16);
-        //let gameStartTime = gameStartDate.toString().slice(16,24);
-        //et gameEndTime = gameEndDate.toString().slice(16,24);
-        //console.log("gameDates: ",gameStartDate,gameEndDate);
-        //console.log("StartIme",gameStartTime,'-',gameEndTime);
-        const gameTimeStamp = startDate
-        const gameHost= item.host;
-        const gameStyle = item.style;
+      renderTeam = (player) => {
+        console.log("rendering team",player);
+        /* Get fancy usernames here */
+        return (
+          <Text>Player Team!</Text>
+        )
+      }
+      renderPlayer= ({ item }) => {
+        console.log("Rendering Player");
         let teamInfo = ''
         let gameIcon = ''
-        if (gameStyle == 'solo'){
+        if (gameStyle == 'solo'){ // Dont render Team, render color
           gameIcon = 'user';
           teamInfo = 'FFA'
-        } else if(gameStyle == 'team'){
+        } else if(gameStyle == 'team'){ // Render Team info, allow host to alter teams
           gameIcon = 'users';
           teamInfo = item.num_teams + ' Teams'
         }
         return (      
         <ListItem
           key = {Item.id}
-          onPress={() => this.joinPressed(item) }
-          title={item.name}
-          subtitle={gameTimeStamp}
+          title={item.username}
+          subtitle={item.gunID}
           subtitleStyle = {{
             fontSize: 12,
             color: 'gray' // Make dynamic so that close times are red?
           }}
-          leftIcon={{ name: gameIcon, type: 'feather' }}
-          rightTitle = {gameHost}
+          leftIcon={{ name: 'user', type: 'feather' } /*Could be Avatar as well? or team/League indicator */}
+          rightTitle = {this.renderTeam()}
           rightTitleStyle = {{
             fontSize: 12
           }}
@@ -448,37 +440,135 @@ export default class JoinGameScreen extends Component {
           return (<View/>)
         }
       }
+      renderPlayers = () => {
+        const playerList = this.state.playerList;
+        if (playerList == undefined || playerList == null){
+          return (
+            <ActivityIndicator size="large" color="#61578b"
+              style = {{
+              paddingTop: 25,
+              justifyContent: 'center', 
+              alignContent: 'center'
+             }} />
+          )
+        }
+          if (gameList.length == 0){ /* Should be impossible because host is joined */
+            return (
+                  <Text>No Players Joined</Text>
+            )
+
+          } else{
+            return(
+              <FlatList
+                keyExtractor={this.keyExtractor}
+                data={playerList}
+                renderItem={this.renderPlayer}
+              />
+
+            )
+          }
+        }
+      
+      
+      renderGameDataCard = () =>{ /* More to come!!! */
+        const gameData = this.state.gameData;
+        var ammoText = gameData.ammo
+        if (gameData.ammo <=0){
+            ammoText = "Infinite"
+        }
+        if (gameData == null){
+          return( 
+          <View>
+              <ActivityIndicator size="large" color="#61578b"
+                style = {{
+                    paddingTop: 30,
+                    justifyContent: 'center', 
+                    alignContent: 'center'
+                }} />
+          </View>
+          )
+        } else {
+          return(
+            <View>
+                <Card title={gameData.name}>
+                <ListItem 
+                  title= "Gamemode"
+                  subtitlle = {gameData.style /*game mode*/}
+                />
+                <ListItem 
+                  title= "Lives"
+                  subtitlle = {gameData.num_lives /*game mode*/}
+                />
+                <ListItem 
+                  title= "ammo"
+                  subtitlle = {ammoText /*game mode*/}
+                />
+                <ListItem 
+                  title= "Host"
+                  subtitlle = {gameData.host /*game mode*/}
+                />
+
+                <Divider/>
+                <Text>Players</Text>
+                {this.renderPlayers()}
+                </Card>
+            </View>
+          )
+        }
+      }
+      renderGameDataCard = () =>{ /* More to come!!! */
+        const gameData = this.state.gameData;
+        var ammoText = gameData.ammo
+        if (gameData.ammo <=0){
+            ammoText = "Infinite"
+        }
+        if (gameData == null){
+          return( 
+          <View>
+              <ActivityIndicator size="large" color="#61578b"
+                style = {{
+                    paddingTop: 30,
+                    justifyContent: 'center', 
+                    alignContent: 'center'
+                }} />
+          </View>
+          )
+        } else {
+          return(
+            <View>
+                <Card title={gameData.name}>
+                <ListItem 
+                  title= "Gamemode"
+                  subtitlle = {gameData.style /*game mode*/}
+                />
+                <ListItem 
+                  title= "Lives"
+                  subtitlle = {gameData.num_lives /*game mode*/}
+                />
+                <ListItem 
+                  title= "ammo"
+                  subtitlle = {ammoText /*game mode*/}
+                />
+                <ListItem 
+                  title= "Host"
+                  subtitlle = {gameData.host /*game mode*/}
+                />
+                </Card>
+            </View>
+          )
+        }
+      }
+
+
       render() {
         return(
           <ThemeProvider {...this.props}  theme={LaserTheme}>
-           <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Join Game" headerType = "join" />
+           <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Game Lobby" headerType = "lobby" />
             <GunStatusDisplay updateConStatus = {this.updateConnectionStatus}></GunStatusDisplay>
-            <Input
-              placeholder='Game Key (optional)'
-              keyboardType='default'
-              returnKeyType='done'
-              clearButtonMode='always'
-              leftIcon={{ type: 'entypo', name: 'key' }}
-              errorMessage= {this.state.keyError}
-              onChangeText={this.editGamekey}
-              underlineColorAndroid = '#FFF'
-              style={{marginBottom:4
-                      }}
-              value={this.state.key}
-            />
-            <Button style= {{size: 4,
-                            marginHorizontal: 10,
-                            marginVertical: 5
-                            
-            }}
-              title= "Search Private Games"
-              disabled = {this.getKeyStatus()}
-              onPress={() => this.requestPrivateGames()}
-              />
-            
-            {this.rendergameListHeader()}
+            <FlatList>
             {this.renderJoinError()}
-            {this.renderGameList()}
+            {this.renderGameDataCard()}
+            </FlatList>
             </ThemeProvider>
           );
         }

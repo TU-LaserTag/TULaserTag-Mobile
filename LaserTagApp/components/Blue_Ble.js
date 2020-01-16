@@ -7,7 +7,7 @@ constructor() {
     this.manager = new BleManager();
 }
 
-componentWillMount() {
+UNSAFE_componentWillMount() {
   const subscription = this.manager.onStateChange((state) => {
       if (state === 'PoweredOn') {
           this.scanAndConnect();
