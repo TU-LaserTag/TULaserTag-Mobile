@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@react-native-community/async-storage": "^1.7.1",
+    "@react-native-community/datetimepicker": "^2.1.0",
     "@react-native-community/masked-view": "0.1.5",
     "@tradle/react-native-http": "^2.0.0",
     "assert": "^1.1.1",
@@ -42,6 +43,7 @@
     "react-native-gesture-handler": "~1.5.0",
     "react-native-level-fs": "^3.0.0",
     "react-native-multipeer": "^0.1.1",
+    "react-native-numeric-input": "^1.8.3",
     "react-native-os": "^1.0.1",
     "react-native-randombytes": "^3.0.0",
     "react-native-reanimated": "~1.4.0",

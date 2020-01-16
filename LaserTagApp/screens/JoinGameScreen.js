@@ -1,14 +1,13 @@
 import React, { Component } from 'react';
 import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList} from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome5';
 import { Text,Button, ThemeProvider, Input, Divider, ListItem} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
-import { Container } from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 import GunStatusDisplay from '../components/GunStatusDisplay'
 import { stringToBytes, bytesToString } from 'convert-string';
 import BleManager, { connect } from 'react-native-ble-manager';
 import {Web_Urls} from '../constants/webUrls';
+import { Item } from 'native-base';
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
@@ -198,7 +197,7 @@ export default class JoinGameScreen extends Component {
         this.setState({loading: true,
                         gameList: [],
                         searchMode: 'public',
-                        gameListHeader: "Public Games: "
+                        gameListHeader: "Public Games:"
         })
         var getURL = Web_Urls.Host_Url + "/game"
         console.log("Sending request to ",getURL)
@@ -280,13 +279,23 @@ export default class JoinGameScreen extends Component {
       }
     
       switchSearchMode = () => {
-        newMode =  ((this.state.searchMode == 'private') ? 'public' : 'private');
-        this.setState({searchMode: newMode});
-        this.refresh();
+        const newMode =  ((this.state.searchMode == 'private') ? 'public' : 'private');
+        if (newMode == 'public'){
+          this.setState({searchMode: 'public',
+                        key: ''
+          });
+        } else{
+            this.setState({searchMode: 'private'})
+          
+        }
+        this.refresh(newMode)
       }
 
-      refresh = () => {
-        mode =  this.state.searchMode;
+      refresh = (mode) => {
+        
+        if (this.state.key == ''){
+          mode = 'public'
+        }
         if (mode == 'public'){
           this.requestGames();
         } else{
@@ -374,7 +383,7 @@ export default class JoinGameScreen extends Component {
         return (
             <ListItem
               containerStyle = {{
-                backgroundColor: 'gray',
+                backgroundColor: '#ae936c',
                 margin: 0
               }}
               onPress={() => this.switchSearchMode()}
@@ -388,11 +397,11 @@ export default class JoinGameScreen extends Component {
         let gameStartDate = Date(item.date + ' ' +item.starttime);
         let gameEndDate = Date(item.date + ' ' +item.endtime);
         let startDate = gameStartDate.toString().slice(0,16);
-        let gameStartTime = gameStartDate.toString().slice(16,24);
-        let gameEndTime = gameEndDate.toString().slice(16,24);
+        //let gameStartTime = gameStartDate.toString().slice(16,24);
+        //et gameEndTime = gameEndDate.toString().slice(16,24);
         //console.log("gameDates: ",gameStartDate,gameEndDate);
         //console.log("StartIme",gameStartTime,'-',gameEndTime);
-        const gameTimeStamp = startDate + gameStartTime + ' - ' + gameEndTime;
+        const gameTimeStamp = startDate
         const gameHost= item.host;
         const gameStyle = item.style;
         let teamInfo = ''
@@ -406,6 +415,7 @@ export default class JoinGameScreen extends Component {
         }
         return (      
         <ListItem
+          key = {Item.id}
           onPress={() => this.joinPressed(item) }
           title={item.name}
           subtitle={gameTimeStamp}
@@ -446,11 +456,20 @@ export default class JoinGameScreen extends Component {
               placeholder='Game Key (optional)'
               keyboardType='default'
               returnKeyType='done'
+              clearButtonMode='always'
               leftIcon={{ type: 'entypo', name: 'key' }}
               errorMessage= {this.state.keyError}
               onChangeText={this.editGamekey}
+              underlineColorAndroid = '#FFF'
+              style={{marginBottom:4
+                      }}
+              value={this.state.key}
             />
-            <Button style= {{size: 4}}
+            <Button style= {{size: 4,
+                            marginHorizontal: 10,
+                            marginVertical: 5
+                            
+            }}
               title= "Search Private Games"
               disabled = {this.getKeyStatus()}
               onPress={() => this.requestPrivateGames()}
@@ -465,23 +484,4 @@ export default class JoinGameScreen extends Component {
       }
   
       
-  const styles = StyleSheet.create({
-    header: {
-      //flex:1,
-      top: 0, 
-      alignItems: 'center',
-      marginBottom:1
-    },
-    title: {
-      textAlign: 'center',
-      color: '#1E0F2A',
-      fontSize: 19,
-      fontWeight: 'bold'
-    },
-    cas: {
-      textAlign: 'center',
-      color: '#1E0F2A',
-      fontSize: 15,
-      fontWeight: 'bold'
-    },
-  })
+  

@@ -25,7 +25,7 @@ export default class HomeScreen extends Component {
   let optVal =  optDic.value
   //console.log(optDic, optText, optVal)
   //alert("pressed "+optText)
-  this.props.navigation.navigate(optVal)
+  this.props.navigation.navigate(optVal,{userData: this.state.loginData});
 }
 
 renderWelcome(){
@@ -54,17 +54,14 @@ renderWelcome(){
       <ThemeProvider theme={LaserTheme}>
        <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
         {this.renderWelcome()}
-        <Container style= {{backgroundColor: 'gray'}}>
+        
         <ButtonMenu 
               menuOptions = {menuOptions}
               onPressItem = {this.onMenuPress}
         />
-        </Container>
         <Footer>
           <FooterTab>
-            <Button full>
-              <Text>?</Text>
-            </Button>
+            
           </FooterTab>
         </Footer>
         </ThemeProvider>

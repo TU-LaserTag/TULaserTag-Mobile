@@ -323,12 +323,12 @@ export default class GunStatusDesplay extends Component {
         //let pService = myGun.advertising.serviceUUIDs[0]
         //let serviceTag = pService.slice(-6);
         //const gunName = myGun.name + ': ' + serviceTag;
-        const statusColor = this.state.gunConnected? '#99ff99' : 'red'; 
+        const statusColor = this.state.gunConnected? '#99ff99' : '#ffc1cc'; 
         return(
-            <View style= {{backgroundColor: 'gray'}}>
+            <View style= {{backgroundColor: '#ae936c'}}>
             <Text style={{
                 fontSize: 22,
-                margin: 5,
+                margin: 1,
                 backgroundColor: statusColor,
                 textAlign: 'center'
             }} onPress={() => this.gotoGunScreen() }>
@@ -345,7 +345,7 @@ export default class GunStatusDesplay extends Component {
     return (
      <ThemeProvider theme={LaserTheme}>
         {this.renderGunStatus()}   
-        <Divider style={{ backgroundColor: 'blue' }} />           
+        <Divider style={{ backgroundColor: '#ae936c' }} />           
 
         </ThemeProvider>
     );

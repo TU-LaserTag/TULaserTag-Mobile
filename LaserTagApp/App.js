@@ -28,6 +28,7 @@ const RootStack = createStackNavigator(
     headerMode: 'none',
     navigationOptions: {
           headerVisible: true,
+          gestureEnabled: false,
     }
   }
 );

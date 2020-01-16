@@ -41,5 +41,9 @@ export const LaserTheme = {
 
         },
         backgroundColor: 'white'
+    },
+    Footer:{
+      backgroundColor: '#61578b'
     }
+    
   };
