@@ -77,7 +77,15 @@ export default class CustomHeader extends Component {
       <Header>
       <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
       <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
-      <Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />
+      {/*<Icon name='home' type='fontAwesome' color='white' onPress={() => this.goHome()} />*/}
+    </Header>
+    )
+  } else if (type == "lobby") {
+    return (
+      <Header>
+      <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
+      <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
+      <Icon name='refresh' type='ion' color='white' onPress={() => this.refresh()} />
     </Header>
     )
   }

@@ -42,6 +42,7 @@
     "react-native-elements": "^1.2.7",
     "react-native-gesture-handler": "~1.5.0",
     "react-native-level-fs": "^3.0.0",
+    "react-native-modal-dropdown": "^0.7.0",
     "react-native-multipeer": "^0.1.1",
     "react-native-numeric-input": "^1.8.3",
     "react-native-os": "^1.0.1",
