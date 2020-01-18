@@ -5,6 +5,7 @@ import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader'
 import { Container } from 'native-base';
 import { FlatList } from 'react-native-gesture-handler';
+import {Web_Urls} from '../constants/webUrls';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput from 'react-native-numeric-input'
 const dimensions = Dimensions.get('window');
@@ -18,6 +19,7 @@ export default class HostScreen extends Component {
   constructor(){
     super()
     this.state = {
+      userData: null,
       scanning:false,
       key: '',
       appState: '',
@@ -28,8 +30,11 @@ export default class HostScreen extends Component {
       gameList: [],
       joinGameError: false,
       gameListHeader: '',
+
       gameModeIndex: 0,
+      gameModeText: 'solo',
       selectionIndex:0,
+      selectionText: 'automatic',
       gameName: '',
       gameNameError: '',
       gameCode: '',
@@ -44,8 +49,9 @@ export default class HostScreen extends Component {
       num_teams: 2,
       num_lives: 3,
       timeDisabled: 5,
-      host: ''
+      host: '',
       
+      gameData: null,
      
     }
     //console.log("construct");
@@ -63,10 +69,124 @@ export default class HostScreen extends Component {
     //console.log("Host Screen Mount")
     const userData = this.props.navigation.getParam("userData", null);
     const host = userData.username;
-    this.setState({host})
+    this.setState({host, userData})
   } 
-  updateIndex (gameModeIndex) {
-    this.setState({gameModeIndex})
+
+
+  createGame = () =>{
+    // Set 0s to -1 for infinite here
+    // Do empty String validation errors here
+    const date = this.state.gameDate;
+    var dd = date.getDate();
+    var mm = date.getMonth()+1; 
+    var yyyy = date.getFullYear();
+    if(dd<10){
+        dd='0'+dd;
+    } 
+    if(mm<10){
+        mm='0'+mm;
+    } 
+    today = mm+'-'+dd+'-'+yyyy;
+     
+    const GamePayload = {
+      maxammo: this.state.ammo,
+      style: this.state.gameModeText,
+      timedisabled: this.state.timeDisabled,
+      maxLives: this.state.num_lives,
+      pause: false,
+      date: today,
+      code: this.state.gameCode,
+      num_teams: this.state.num_teams,
+      team_selection: this.state.selectionText,
+      name: this.state.gameName,
+      host: this.state.host,
+    }
+
+    const TestGamePayload = {
+      maxammo: 100,
+      style: "team",
+      timedisabled: 3,
+      maxLives: 2,
+      pause: false,
+      date: "01-18-2020",
+      code: "",
+      num_teams: 2,
+      team_selection: "automatic",
+      name: "Mister Game and watch",
+      host: "Canthony",
+    }
+        //this.sendCreateGameRequest(GamePayload);
+        this.handleCreateGameResponse("noope");
+  }
+
+  sendCreateGameRequest(payload) {
+    var getURL = Web_Urls.Host_Url + "/create/game"  
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          gameResponse = JSON.parse(request.response);
+          console.log("GOT RESPONSE",gameResponse)
+          this.handleCreateGameResponse(gameResponse);
+        } else {
+          console.log("Got Error",request);
+          // Needs more error handling
+          //this.setState({joinGameError: "Could not connect to server, Please try again later",
+          //              loading: false});     
+        }
+      }
+      console.log("SCreating Game at",getURL); 
+      request.open('POST',getURL);
+      request.setRequestHeader("Content-type","application/json");
+      request.send(JSON.stringify(payload)); // Strigify?
+  }
+  
+  handleCreateGameResponse = (gameResponse) =>{
+    console.log("Navigating with response",gameResponse);
+    DummyGameResponse = {
+      "code": "",
+      "date": "01-18-2020",
+      "endtime": null,
+      "host": "Canthony",
+      "id": 12,
+      "locked": false,
+      "maxLives": 2,
+      "maxammo": 100,
+      "name": "Mister Game and watch",
+      "num_teams": 2,
+      "pause": false,
+      "players_alive": null,
+      "starttime": null,
+      "style": "team",
+      "team_selection": "automatic",
+      "teams_alive": null,
+      "timedisabled": 3,
+      "winners": null,
+    };
+    
+    this.props.navigation.navigate("Lobby",{userData: this.state.userData,
+                                          gameData: DummyGameResponse,
+                                          });
+  }
+
+  updateIndex = (gameModeIndex) => {
+    let gameModeText = 'solo';
+    if (gameModeIndex == 1){
+      gameModeText = 'team';
+    }
+    this.setState({gameModeIndex,
+                    gameModeText});
+  }
+
+  updateSelectionIndex = (selectionIndex) =>{
+    let selectionText = 'manual'
+    if (selectionIndex == 1){
+      selectionText = 'automatic';
+    }
+    this.setState({selectionIndex,
+                    selectionText});
   }
       
   editGameName = (gameName) =>{
@@ -164,7 +284,7 @@ export default class HostScreen extends Component {
   renderTeamSelectionModeButtons =() => {
     const buttons = [{ element: this.selectionButton0 }, { element: this.selectionButton1 }]
     const selectionIndex  = this.state.selectionIndex
-    const gameIcon = (selectionIndex == 0) ? 'gears' : 'pencil';
+    const gameIcon = (selectionIndex == 0) ? 'pencil' : 'gears';
     const prereqText = ((this.state.gameModeIndex == 0 ) ? "Players":"Teams" );
     if (prereqText == "Players"){
       return(
@@ -181,7 +301,7 @@ export default class HostScreen extends Component {
         </Text>
         </View>
         <ButtonGroup
-          onPress={selectionIndex => this.setState({selectionIndex})}
+          onPress={this.updateSelectionIndex}
           selectedIndex={selectionIndex}
           buttons={buttons}
           containerStyle={{height: 25}} />
@@ -197,8 +317,8 @@ export default class HostScreen extends Component {
     }
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
-           <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-              <Text style={{ margin: 3, fontSize: Container_Height/1.5}}>{prereqText}: </Text>
+           <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+              <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{prereqText}: </Text>
             </View>
             <NumericInput 
               value={this.state.num_teams} 
@@ -208,6 +328,7 @@ export default class HostScreen extends Component {
               totalHeight={Container_Height} 
               iconSize={20}
               minValue={2}
+              maxValue={8}
               step={1}
               valueType='integer'
               rounded 
@@ -216,7 +337,7 @@ export default class HostScreen extends Component {
               rightButtonBackgroundColor='#ae93Bf' 
               leftButtonBackgroundColor='#ae939f'/>
               <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-              <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Number of {prereqText} in the game</Text>
+              <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Number of Teams</Text>
               </View>
       </Container>
     )
@@ -226,8 +347,8 @@ export default class HostScreen extends Component {
     const liveText = "Lives :";
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
-           <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-            <Text style={{ margin: 3, fontSize: Container_Height/1.5}}>{liveText} </Text>
+           <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+            <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{liveText} </Text>
           </View>
             <NumericInput 
               value={this.state.num_lives} 
@@ -245,18 +366,17 @@ export default class HostScreen extends Component {
               rightButtonBackgroundColor='#ae93Bf' 
               leftButtonBackgroundColor='#ae939f'/>
             <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-              <Text style={{color: 'gray', marginLeft: 4, fontSize: 11}}>Lives per game    (0 for infinite)</Text>
+              <Text style={{color: 'gray', marginLeft: 4, fontSize: 11}}>Lives per game{"\n"}(0 for infinite)</Text>
             </View>
       </Container>
     )
   }
   renderCooldownNumberPicker = () => {
-    //const liveText = ((this.state.gameModeIndex == 0 ) ? "Number of lives":"Number of lives" );
-    const liveText = "Cooldown";
+    const liveText = "Cooldown:";
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
-           <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-            <Text style={{ margin: 3, fontSize: Container_Height/1.5}}>{liveText} </Text>
+           <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+            <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{liveText} </Text>
           </View>
             <NumericInput 
               value={this.state.timeDisabled} 
@@ -283,8 +403,8 @@ export default class HostScreen extends Component {
   renderAmmoSelection = () => {
     return (
           <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
-          <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-           <Text style={{ margin: 3, fontSize: Container_Height/1.5}}>Ammo:</Text>
+          <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+           <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:24}} >Ammo:</Text>
          </View>
            <NumericInput 
              value={this.state.ammo} 
@@ -297,12 +417,12 @@ export default class HostScreen extends Component {
              minValue={0}
              valueType='integer'
              rounded 
-             textColor='black' 
+             textColor='#4a4a4a' 
              iconStyle={{ color: 'white' }} 
              rightButtonBackgroundColor='#ae93Bf' 
              leftButtonBackgroundColor='#ae939f'/>
            <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-             <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Shots per game      (0 for infinite)</Text>
+    <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Shots per game{"\n"}(0 for infinite)</Text>
              </View>
      </Container>
       )
@@ -316,7 +436,7 @@ export default class HostScreen extends Component {
     if (show){
       return (
         <Container style= {{ flex:5.3, backgroundColor: '#ffffff'}}>
-          <View style={{ alignItems: 'center', justifyContent: 'center', }}>
+          <View style={{ alignItems: 'center', justifyContent: 'center'}}>
           <Text style = {{ marginLeft: 4, fontSize: 20, backgroundColor: '#ae93CF' }}>Date: {dateStr}</Text>
           </View>
         <Button onPress={this.toggleDatePicker} title="Done" />
@@ -339,37 +459,30 @@ export default class HostScreen extends Component {
     </Container>
     )
   }
-  getTimeLimit = (currentTime) =>{
+  getTimeLimit = (currentTime) =>{ // TODO: ASK ABOUT TIME ZONE!!!
     var minLim = 0;
     curDate = new Date(currentTime);
-    console.log("CurDate",curDate)
     var curHour = curDate.getHours();
     var curMin = curDate.getMinutes();
-    console.log("Curmin",curHour,curMin);
     var minutesUntil = ((23 - curHour) * 60) + (59 - curMin);
-    console.log("Munites until:",minutesUntil)
     milisUntil = minutesUntil * 60 *1000;
     minLim = currentTime + milisUntil
     var predictedEnd = new Date(minLim)
-    console.log("Predicted End",predictedEnd);
     return minutesUntil;
   }
+
   renderGameLengthPicker = () => {
     const gameTime = this.state.gameDate.getTime();
-    console.log("StateDate",this.state.gameDate,this.state.today);
     var gameLength = this.state.game_length * 60 * 1000;
     const potentialEnd = new Date(gameTime + gameLength);
+    var newLengthLimit = '';
     if (this.state.lengthLimit == null){
-        console.log("Getting limit");
-        const newLengthLimit = this.getTimeLimit(gameTime)
-        console.log('got limit",',newLengthLimit);
-        this.setState({lengthLimit: newLengthLimit});
+      newLengthLimit = this.getTimeLimit(gameTime)
     }
-    console.log("Potential End",potentialEnd);
     return (
           <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
-          <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-           <Text style={{ margin: 3, fontSize: Container_Height/1.6}}>Game Timer:</Text>
+          <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+           <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>Timer:</Text>
          </View>
            <NumericInput 
              value={this.state.game_length} 
@@ -380,15 +493,15 @@ export default class HostScreen extends Component {
              iconSize={20}
              step={1}
              minValue={1}
-             maxValue={this.state.lengthLimit}
+             maxValue={newLengthLimit}
              valueType='integer'
              rounded 
-             textColor='black' 
+             textColor='#4a4a4a' 
              iconStyle={{ color: 'white' }} 
              rightButtonBackgroundColor='#ae93Bf' 
              leftButtonBackgroundColor='#ae939f'/>
            <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-             <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Minutes ( Cannot play through midnight as of right now)</Text>
+    <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Minutes{"\n"}Limited to 11:59 PM</Text>
              </View>
      </Container>
       )
@@ -437,7 +550,7 @@ export default class HostScreen extends Component {
           {this.renderLivesNumberPicker()}
           {this.renderCooldownNumberPicker()}
           {this.renderAmmoSelection()}
-          <Button title= "Begin Hosting"/>
+          <Button title= "Begin Hosting" onPress={() => this.createGame()}/>
          
         </ThemeProvider>
       );

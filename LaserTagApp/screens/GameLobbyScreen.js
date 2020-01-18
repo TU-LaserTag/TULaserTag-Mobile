@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList, ViewBase} from 'react-native';
-import { Text,Button, Icon, ThemeProvider, Input, Divider, ListItem,Card} from 'react-native-elements';
+import { Text,Button, Icon, ThemeProvider, Input, Divider, ListItem,Card,Overlay} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader';
 import GunStatusDisplay from '../components/GunStatusDisplay'
@@ -10,6 +10,8 @@ import {Web_Urls} from '../constants/webUrls';
 import { Item,Toast, Picker } from 'native-base';
 import { ScrollView, TouchableHighlight } from 'react-native-gesture-handler';
 import ModalDropdown from 'react-native-modal-dropdown';
+import { ColorPicker,toHsv, fromHsv } from 'react-native-color-picker'
+ 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
@@ -42,7 +44,14 @@ export default class GameLobbyScreen extends Component {
       teamData: [],
       userData: {},
       playerList: [],
-      isHost: false
+      isHost: false,
+      editTeam: null,
+      teamNameInput: null,
+      temColorInput: null,
+      createTeam: false,
+      hue: 0,
+      sat: 0,
+      val: 1,
     }
     console.log("construct");
     this.loadStorage()  // CCan load storage but really not nexessary for now
@@ -52,7 +61,8 @@ export default class GameLobbyScreen extends Component {
     //this.gameLobbyHandleUpdateValueForCharacteristic = this.gameLobbyHandleUpdateValueForCharacteristic.bind(this);
     //this.gameLobbyHandleDisconnectedPeripheral = this.gameLobbyHandleDisconnectedPeripheral.bind(this);
     //this.gameLobbyHandleAppStateChange = this.gameLobbyHandleAppStateChange.bind(this);
-
+    this.onSatValPickerChange = this.onSatValPickerChange.bind(this);
+    this.onHuePickerChange = this.onHuePickerChange.bind(this);
   }
   
   loadStorage = () => {
@@ -100,36 +110,16 @@ export default class GameLobbyScreen extends Component {
       const dummyTeamData = [{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null,"players":[{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]}]
       const dummyPlayerData = [{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"},{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]
     
-      //this.setState({userData});
-      this.setState({gameData: dummyGameData}); // FIX THIS LATEWR
-      this.setState({teamData: dummyTeamData}); // FIX THIS LATEWR
-      this.setState({playerList: dummyPlayerData}); // FIX THIS LATEWR
+      this.setState({userData});
+      this.setState({gameData});
+      const isHost
+      //this.setState({gameData: dummyGameData}); // FIX THIS LATEWR
+      //this.setState({teamData: dummyTeamData}); // FIX THIS LATEWR
+      //this.setState({playerList: dummyPlayerData}); // FIX THIS LATEWR
       
 
       console.log("Lobyy Mounted")
-      /*AppState.addEventListener('change', this.gameLobbyHandleAppStateChange);
-      //const data = this.props.navigation.getParam("varName", "None") or else none
-      const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-      const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-      const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-      const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-
-      if (discoverListeners.length <= 1) {
-          console.log("Joinscreen discover listener");
-          this.gameLobbyHandlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.gameLobbyHandleDiscoverPeripheral );
-      }
-      if (stopListeners.length <= 1) {
-        console.log("Joinscreen Stop listener");
-        this.gameLobbyHandlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.gameLobbyHandleStopScan );
-      }
-      if (disconnectListeners.length <= 1) {
-        console.log("JoinScreen disconnect listener");
-        this.gameLobbyHandlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.gameLobbyHandleDisconnectedPeripheral );
-      }
-      if (updateListeners.length <= 1) {
-        console.log("JoinScreen updateListener");
-        this.jgameLobbyHandlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.jgameLobbyHandleUpdateValueForCharacteristic );
-      }*/
+      /*AppState.addEventListener('change', this.gameLobbyHandleAppStateChange);*/
       console.log("Loading gameData",gameData)
       //this.loadGameData(gameData.id); // Maybe move to constructor?
         
@@ -137,26 +127,10 @@ export default class GameLobbyScreen extends Component {
 
     componentWillUnmount() { // cancel all async tasks herere? Appstate change?
       console.log("unmouting JoinScreen status");
-     /* var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-      var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-      var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-      var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-      console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
-  
-      if (discoverListeners.length > 0){
-          this.gameLobbyHandlerDiscover.remove('BleManagerDiscoverPeripheral');
-      }
-      if (stopListeners.length >0){
-        this.gameLobbyHandlerStop.remove('BleManagerStopScan');
-      }
-      if (disconnectListeners.length > 0){
-        this.gameLobbyHandlerDisconnect.remove('BleManagerDisconnectPeripheral');
-      }
-      if (updateListeners.length > 0){
-        this.gameLobbyHandlerUpdate.remove('BleManagerDidUpdateValueForCharacteristic');
-      }*/
     }
-
+    updateConnectionStatus(data){
+      console.log("Updating Connection Status",data);
+    }
     // Handlers
     gameLobbyHandleDisconnectedPeripheral(gun) {
       let connectedGun = this.state.connectedGun;
@@ -275,7 +249,35 @@ export default class GameLobbyScreen extends Component {
         .catch((error) => {console.log("OOF:"); console.error(error);});
       }
 
-
+      editTeam = (team) =>{
+        console.log("Editing team",team);
+        if (this.state.editTeam != null){
+          console.log("Toggling edit",team.name,this.state.editTeam.name);
+          if (this.state.editTeam.name == team.name){
+            console.log("Sending request to edit team",team,this.state.teamNameInput, this.state.temColorInput)
+            this.setState({editTeam:null});
+          } else{
+            console.log("Editing a different team");
+            this.setState({editTeam:team});
+          }
+        } else{
+          console.log("Opening up edit Team");
+          this.setState({editTeam:team});
+        }
+        
+      }
+      onSatValPickerChange({ saturation, value }) {
+        this.setState({
+          sat: saturation,
+          val: value,
+        });
+      }
+    
+      onHuePickerChange({ hue }) {
+        this.setState({
+          hue,
+        });
+      }
       handleGameListResponse(response) {
         const gameList = response
         console.log("Handling",response)
@@ -316,61 +318,18 @@ export default class GameLobbyScreen extends Component {
           }
         }
       }
-      getGameStatus = () => {
-        if (this.state.key == "") {
-          return "View Games"
-        } else{
-          return "Join Game"
-        }
+
+      isEmptyObject = (obj) => {
+        return (Object.entries(obj).length === 0 && obj.constructor === Object)
       }
-      getKeyStatus = () => {
-        if (this.state.key == "") {
-          return true;
-        } else{
-          return false;
-        }
-      }
+     
+      
+
       keyExtractor = (item, index) => {
       }
-      renderGameList = () => {
-        const gameList = this.state.gameList;
-        if (gameList == undefined){
-          return (
-            <ActivityIndicator size="large" color="#0000ff"
-            style = {{
-              paddingTop: 30,
-              justifyContent: 'center', 
-              alignContent: 'center'
-             }} />
-          )
-        }
-        if (this.state.loading == true){
-          return (
-            <ActivityIndicator size="large" color="#0000ff"
-            style = {{
-              paddingTop: 30,
-              justifyContent: 'center', 
-              alignContent: 'center'
-             }} />
-          )
-        } else{
-          if (gameList.length == 0){
-            return (
-                  <Text></Text>
-            )
 
-          } else{
-            return(
-              <FlatList
-                keyExtractor={this.keyExtractor}
-                data={gameList}
-                renderItem={this.renderGame}
-              />
 
-            )
-          }
-        }
-      }
+      
       renderJoinError = () => {
         if (this.state.joinGameError != ''){
           return (
@@ -379,6 +338,28 @@ export default class GameLobbyScreen extends Component {
         }else{
           return 
         }
+      }
+
+
+      renderColorPicker = () =>{
+        const { hue, sat, val } = this.state;
+        return (
+          <Overlay isVisible>
+            <Text>Hello from Overlay!</Text>
+    
+         <View style={{flex: 1, padding: 45, backgroundColor: '#212021'}}>
+          <Text style={{color: 'white'}}>React Native Color Picker - Controlled</Text>
+          <ColorPicker
+            oldColor='purple'
+            color={this.state.color}
+            onColorChange={this.onColorChange}
+            onColorSelected={color => alert(`Color selected: ${color}`)}
+            onOldColorSelected={color => alert(`Old color selected: ${color}`)}
+            style={{flex: 1}}
+          />
+        </View>
+        </Overlay>
+        )
       }
       rendergameListHeader = () => {
         const searchMode = this.state.searchMode
@@ -408,8 +389,8 @@ export default class GameLobbyScreen extends Component {
       getTeamFromUsername = (username) =>{
         teamList = this.state.teamData;
         myTeam = 'none';
-        return "none"
-        if (teamList == null || teamList == undefined){
+        return "none" // TODO: REMOVE THISSS------------------------------------------------------=-=-=-=-=-=-
+        if (teamList == null || teamList == undefined || teamList.length == 0){
           console.log("No Teams")
           return {name: "None", color: "#EEEEEE"}
         } else{
@@ -437,13 +418,10 @@ export default class GameLobbyScreen extends Component {
 
       renderTeamPicker = (playerTeam) => {
         const gameData = this.state.gameData;
-        console.log("renderi",gameData.team_selection);
         let teamItems = this.state.teamData.map( (team, index) =>{
           return team.name
         });
-        console.log(teamItems)
         if (!this.state.isHost){
-          console.log(" Yourea host");
           if (playerTeam == "none"){ // Then check if needs team and if teamPicking is manual
             if (gameData.team_selection == 'manual') {
               console.log("Displaying team picker");
@@ -518,8 +496,8 @@ export default class GameLobbyScreen extends Component {
           return (<View/>)
         }
       }
-      renderPlayers = () => {
-        const playerList = this.state.playerList;
+      renderPlayers = (playerList,type) => {
+        //const playerList = this.state.playerList;
         if (playerList == undefined || playerList == null){
           return (
             <ActivityIndicator size="large" color="#61578b"
@@ -537,9 +515,11 @@ export default class GameLobbyScreen extends Component {
           } else{
             return(
               <FlatList
+                listKey= {"player"+type}
                 keyExtractor={this.PlayerKeyExtractor}
                 data={playerList}
                 renderItem={this.renderPlayer}
+                extraData={this.state}
               />
 
             )
@@ -575,10 +555,11 @@ export default class GameLobbyScreen extends Component {
           } else if (gameData.style == 'team'){
             gameMode = "Team Battle"
           }
-
+          
           const playerCount = this.state.playerList.length // Acount for when it is null
           const gameIcon = (gameMode == "Free For All") ? 'user' : 'users';
           const liveCount = (gameData.liveCount <= 0) ? 'Infinite Lives' : gameData.maxLives + ' Lives'
+          const playerList = this.state.playerList;
           return(
             <View>
                 <Card title={gameData.name} titleStyle= {{ fontSize: 20}}>
@@ -611,8 +592,9 @@ export default class GameLobbyScreen extends Component {
                 </View>
                 <Divider/>
 
-                {this.renderPlayers()}
+                {this.renderPlayers(playerList,"full")}
                 </Card>
+                {this.renderTeamCards()}
               </View>
           )
         }
@@ -620,11 +602,84 @@ export default class GameLobbyScreen extends Component {
       PlayerKeyExtractor=(item, index) => index.toString()
       TeamKeyExtractor = (item, index) => index.toString()
       DataKeyExtractor = (item, index) => index.toString()
+      TeamCardExtractor = (item, index) =>index.toString()
+      
+      renderTeamCard = ({item}) =>{
+        console.log("rendering team card")
+        const teamName = item.name;
+        const teamColor = item.color;
+        const teamPlayers = item.players;
+        let isEditing = false;
+        if (this.state.editTeam != null){
+            console.log("Checking isEid");
+           isEditing = (item.name == this.state.editTeam.name);
+        }
+        let iconName = ''
+        console.log("IsEditing",isEditing);
+        if (isEditing){
+          iconName = "check" 
+        } else{
+          iconName = "square-edit-outline"
+        }
+        let cardTitle = <View></View>
+        if (!this.state.isHost && !isEditing){ // TODO: CHANGE FROM NOT HOST          
+           cardTitle = <View style = {{flex: 1, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+                            <Icon raised 
+                              onPress={()=> this.editTeam(item)} 
+                              name = {iconName} 
+                              size = {16}  
+                              containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
+                              color= "black"  
+                              type = 'material-community'/> 
+                              <Text style = {{ color: teamColor, marginTop: -35, alignSelf: 'center', fontSize: 18, fontWeight: 'bold'}}> {teamName} </Text>
+                        
+                        </View>
+        } else if (!this.state.isHost && isEditing){ // TODO: CHANGE FROM NOT HOST          
+          cardTitle = <View style = {{flex: 1, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+                          <Input style={{ height: 15}}
+                              value = {this.state.teamNameInput}
+                              autoCompleteType = 'off'
+                              placeholder='teamName'
+                              returnKeyType='done'                     
+                              onChangeText={teamNameInput => this.setState({teamNameInput})} 
+                            />
+                            <View>
+                              {this.renderColorPicker()}
+                            </View>
+                           <Icon raised 
+                             onPress={()=> this.editTeam(item)} 
+                             name = {iconName} 
+                             size = {16}  
+                             containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
+                             color= "black"  
+                             type = 'material-community'/> 
+                             
+                       </View>
+        } else{
+           cardTitle = <View style = {{flex: 0.5, flexDirection: 'row', backgroundColor: '#FFFFFF' }} >
+                              <Text style = {{fontSize: 18, fontWeight: 'bold', color: teamColor}}> {teamName} </Text>
+                              
+                            </View>
+        }
+        return (
+        <Card containerStyle={{borderColor: teamColor}} title={cardTitle} titleStyle= {{ fontSize: 20}}>
+                
+                <Divider style={{marginTop:20}} />
+                
+                {this.renderPlayers(teamPlayers,teamName)}
+               
+
+                
+                </Card>
+        )
+      }
 
       renderTeamCards = () =>{ /* More to come!!! */
         const gameData = this.state.gameData;
         const teamData = this.state.teamData;
-        if (gameData == null){
+        const userData = this.state.userData;
+        var teamList = [];
+        if (gameData == null || this.isEmptyObject(gameData)){
           return( 
           <View>
               <ActivityIndicator size="large" color="#61578b"
@@ -636,11 +691,22 @@ export default class GameLobbyScreen extends Component {
           </View>
           )
         } else {
+          const numTeams = gameData.num_teams;
+          if (teamData.length == 0){
+            console.log("NO Teams")
+            for (i = 1; i <=numTeams; i ++){
+              teamList.push({id:i, name:"Team "+i, key:"t"+i});
+            }
+        } else {
+          teamList = teamData
+        }
           return(
             <FlatList
-              keyExtractor={this.keyExtractor}
-              data={list}
-              renderItem={this.renderItem}
+              listKey = "team"
+              keyExtractor={this.TeamCardExtractor}
+              data={teamList}
+              renderItem={this.renderTeamCard}
+              extraData={this.state}
             />
           )
         }
@@ -655,9 +721,11 @@ export default class GameLobbyScreen extends Component {
             <GunStatusDisplay updateConStatus = {this.updateConnectionStatus}></GunStatusDisplay>
             {/*this.renderJoinError()*/}
             <FlatList
+              listKey = "main"
               keyExtractor={this.DataKeyExtractor}
               data={flatListData}
               renderItem={this.renderGameDataCard}
+              extraData={this.state}
             />
             {/*this.renderGameDataCard()*/}
             </ThemeProvider>

@@ -211,8 +211,11 @@ export default class JoinGameScreen extends Component {
               this.handleGameListResponse(responseList);
             } else {
               // Needs more error handling
-              this.setState({joinGameError: "Could not connect to server, Please try again later",
-                            loading: false});     
+              
+              //this.setState({joinGameError: "Could not connect to server, Please try again later",
+              //              loading: false});     
+              responseList =[{"id":11,"starttime":null,"endtime":null,"maxammo":10,"style":"solo","timedisabled":10,"maxLives":2,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":0,"players_alive":null,"team_selection":"automatic","teams_alive":null,"locked":false,"name":"Skilled Shooting","host":"Caleb Anthony"},{"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":3,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Dranderson"}]
+              this.handleGameListResponse(responseList);
             }
           }
           request.open('GET', getURL);
@@ -237,6 +240,7 @@ export default class JoinGameScreen extends Component {
             }
             if (request.status === 200) {
               responseList = JSON.parse(request.response);
+              
               this.handleGameListResponse(responseList);
             } else {
               console.log("Error",request)
