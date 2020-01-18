@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient;
 
 // Needed for `react-native link`
 // import com.facebook.react.ReactApplication;
+import it.innove.BleManagerPackage;
 import com.reactnativecommunity.asyncstorage.AsyncStoragePackage;
 import com.polidea.reactnativeble.BlePackage;
 
@@ -31,6 +32,7 @@ public class MainApplication extends ExpoApplication implements AppLoaderPackage
 
         // Needed for `react-native link`
         // new MainReactPackage(),
+            new BleManagerPackage(),
             new AsyncStoragePackage(),
             new BlePackage()
     );

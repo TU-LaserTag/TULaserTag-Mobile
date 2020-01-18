@@ -86,6 +86,8 @@
 	<string>Give TU Laser Tag permission to access your photos</string>
 	<key>NSRemindersUsageDescription</key>
 	<string>Allow TU Laser Tag to access your reminders</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Allow TU Laser Tag to use bluetooth to connect to blaster</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>

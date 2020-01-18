@@ -10,9 +10,7 @@ import { Container, Content, Spinner, Body,Left, Right } from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 import HomeScreen from './HomeScreen';
 import Title from '../components/Title'
-import HomeIcon from '../components/Home_Icon';
-import { storage } from '../Storage';
-
+import storage from '../Storage'
 
 export default class LoginScreen extends Component {
   static navigationOptions = {
@@ -36,29 +34,17 @@ export default class LoginScreen extends Component {
       this.setState({ key });
     };
     componentDidMount(){
-        console.log("Mount")
-        loadStorage()
+        console.log("Login mount")
+        this.loadStorage()
         //const data = this.props.navigation.getParam("varName", "None") or else none
         
     } 
     
     loadStorage = () => {
-      storage.load ({
+        global.storage.load ({
         key: 'userData',
-
-        // autoSync (default: true) means if data is not found or has expired,
-        // then invoke the corresponding sync method
         autoSync: true,
-
-        // syncInBackground (default: true) means if data expired,
-        // return the outdated data first while invoking the sync method.
-        // If syncInBackground is set to false, and there is expired data,
-        // it will wait for the new data and return only after the sync completed.
-        // (This, of course, is slower)
         syncInBackground: true,
-
-        // you can pass extra params to the sync method
-        // see sync example below
         syncParams: {
           extraFetchOptions: {
             // blahblah
@@ -67,25 +53,24 @@ export default class LoginScreen extends Component {
         }
     })
     .then(ret => {
-    // found data go to then()
     console.log(ret);
-    this.setState({usernae: ret.username,
+    this.setState({username: ret.username,
                    pass: ret.password})
     })
     .catch(err => {
       // any exception including data not found
       // goes to catch()
-      console.warn(err.message);
+      console.log(err.message);
       switch (err.name) {
         case 'NotFoundError':
-          console.log((" Nodata"))
+          console.log((" Nodata"));
           break;
         case 'ExpiredError':
           // TODO
           break;
       }
     });
-      }
+    }
 
     loginPressed = () => {
       var error = false;
@@ -101,8 +86,6 @@ export default class LoginScreen extends Component {
         this.setState({passError: "Must Input Password"});
         //error = true
       } 
-
-     
       if (error == true){
         return // Breaks out of sending data
       } else{
@@ -113,14 +96,14 @@ export default class LoginScreen extends Component {
           role: "user",
           pass: this.state.pass
         }
-        this.loggedIn(loginData)
-        this.props.navigation.navigate("Home");
+        this.loggedIn(loginData);
+        this.props.navigation.navigate("Home",{loginData: loginData});
       }
     };
 
     loggedIn = (data) => {
       console.log("Logging in and storing data",data)
-      storage.save({
+      global.storage.save({
         key: 'userData',
         data: {
           username: data.username,
@@ -212,7 +195,7 @@ export default class LoginScreen extends Component {
            <CustomHeader {...this.props} headerText= "Login" headerType = "login" />
             <Container>
             <Input
-              value = "Hello world"
+              value = {this.state.username}
               autoCompleteType = 'username'
               placeholder='Username'
               returnKeyType='done'
@@ -222,6 +205,7 @@ export default class LoginScreen extends Component {
 
             />
             <Input
+              value = {this.state.pass}
               autoCompleteType = 'password'
               secureTextEntry = {true}
               password={true}
@@ -232,6 +216,9 @@ export default class LoginScreen extends Component {
               onChangeText={this.editPassword}
             />
             <Button 
+              style = {{
+                marginTop: 3
+              }}
               title= 'Login'
               onPress={() => this.loginPressed()}
               />

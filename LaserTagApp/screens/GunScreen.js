@@ -6,8 +6,11 @@ import {
   FlatList,
   Switch
 } from 'native-base';
+import CustomHeader from '../components/CustomHeader';
 
-//import BluetoothManager from '../components/Ble_manager'
+import { Button, ThemeProvider, Input } from 'react-native-elements'; 
+import { LaserTheme } from '../components/Custom_theme';
+import BluetoothManager from '../components/Ble_manager'
 
 //import BluetoothSerial from 'react-native-bluetooth-serial'
 //import "../components/Blue_tooth"
@@ -24,23 +27,6 @@ export default class GunScreen extends Component {
   }
   componentDidMount(){
     console.log("Mounted")
-  /*
-    Promise.all([
-      BluetoothSerial.isEnabled(),
-      BluetoothSerial.list()
-    ])
-    .then((values) => {
-      const [ isEnabled, devices ] = values
-      this.setState({ isEnabled, devices })
-    })
-   
-    /*BluetoothSerial.on('bluetoothEnabled', () => console.log("BlueTooth Enabled"))
-    BluetoothSerial.on('bluetoothDisabled', () => {
-      console.log("Bluetooth disabled")
-         this.setState({ devices: [] })
-    })
-    BluetoothSerial.on('error', (err) => console.log(`Error: ${err.message}`)) 
-    BluetoothSerial.on('connectionLost', () => console.log("Connection lost"))*/
   }
   _renderItem(item){
 
@@ -48,32 +34,15 @@ export default class GunScreen extends Component {
             <Text style={styles.deviceName}>{item.item.name}</Text>
           </View>)
   }
-  /*
-  enable () {
-    BluetoothSerial.enable()
-    .then((res) => this.setState({ isEnabled: true }))
-    .catch((err) => Toast.showShortBottom(err.message))
-  }
-
-  disable () {
-    BluetoothSerial.disable()
-    .then((res) => this.setState({ isEnabled: false }))
-    .catch((err) => Toast.showShortBottom(err.message))
-  }
-
-  toggleBluetooth (value) {
-    if (value === true) {
-      this.enable()
-    } else {
-      this.disable()
-    }
-  }
-  */
   render() {
 
     return (
-        <BluetoothManager></BluetoothManager>
-    );
+      <ThemeProvider theme={LaserTheme}>
+        <CustomHeader {...this.props} headerText = "Connect to Gun" headerType = "gun"/>
+        <BluetoothManager>
+          </BluetoothManager>
+      </ThemeProvider>
+    )
   }
 }
 

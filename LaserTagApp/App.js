@@ -9,9 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from './screens/HomeScreen'
 import GunScreen from './screens/GunScreen'
 import LoginScreen from './screens/LoginScreen'
-import ServerScreen from './screens/ServerScreen'
+import HostScreen from './screens/HostScreen'
 import JoinGameScreen from './screens/JoinGameScreen';
 import SignupScreen from './screens/SignupScreen';
+import GameLobbyScreen from './screens/GameLobbyScreen';
 
 // Screen setup
 const RootStack = createStackNavigator(
@@ -20,14 +21,16 @@ const RootStack = createStackNavigator(
     Signup: SignupScreen,
     Home: HomeScreen,
     Join: JoinGameScreen,
-    Server: ServerScreen,
-    Gun: GunScreen    
+    Host: HostScreen,
+    Gun: GunScreen,
+    Lobby: GameLobbyScreen   
   },
   {
     initialRouteName: "Login",
     headerMode: 'none',
     navigationOptions: {
           headerVisible: true,
+          gestureEnabled: false,
     }
   }
 );
@@ -37,7 +40,9 @@ console.disableYellowBox = false;
 
 //---------------- Exported data---------------------- \\
 export default class App extends React.Component {
-  
+  componentWillUnmount(){
+    console.log("UNMOUNTING");
+  }
   render() {
     return <AppContainer />;
   }
