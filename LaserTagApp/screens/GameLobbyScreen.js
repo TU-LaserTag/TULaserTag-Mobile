@@ -52,6 +52,7 @@ export default class GameLobbyScreen extends Component {
       teamNameInput: null,
       temColorInput: null,
       createTeam: false,
+      availibleTeams: [],
       hue: 0,
       sat: 0,
       val: 1,
@@ -75,7 +76,6 @@ export default class GameLobbyScreen extends Component {
     }
   })
   .then(userData => {
-  console.log(userData);
   this.setState({userData})
   if (this.state.userData.username == this.state.gameData.host){
     this.setState({isHost: true});
@@ -104,26 +104,24 @@ export default class GameLobbyScreen extends Component {
     const userData = this.props.navigation.getParam("userData", null);
     const gameData = this.props.navigation.getParam("gameData", null);
     const teamData = this.props.navigation.getParam("teamData",null);
-
+    //this.setState({userData,gameData,teamData});
     //const 
-    const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":3,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Dranderson"}
-    const dummyTeamData = [{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null,"players":[{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]}]
+    const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
+    const dummyTeamData = [{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
     const dummyPlayerData = [{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"},{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]
-    this.setState({userData,gameData,teamData});
-
-    if (userData.username == gameData.host){
-      this.setState({isHost: true});
+    
+    if (userData == null){
+      console.log("No user Data");
+      this.loadStorage();
+    } else{
+      if (userData.username == gameData.host){
+        this.setState({isHost: true});
+      }
     }
       
-    //this.setState({gameData: dummyGameData}); // FIX THIS LATEWR
-    //this.setState({teamData: dummyTeamData}); // FIX THIS LATEWR
-    //this.setState({playerList: dummyPlayerData}); // FIX THIS LATEWR
+    this.setState({gameData: dummyGameData,teamData: dummyTeamData,playerList: dummyPlayerData}); // FIX THIS LATEWR
     
-
-    
-    AppState.addEventListener('change', this.gameLobbyHandleAppStateChange);
-    console.log("Loading data",gameData,userData,teamData);
-    console.log()
+    //console.log("Loading data",gameData,userData,teamData);
     //this.requestGameData(gameData.id); // Maybe move to constructor?
       
   } 
@@ -243,99 +241,105 @@ export default class GameLobbyScreen extends Component {
     </Overlay>
     )
   }
-  rendergameListHeader = () => {
-    const searchMode = this.state.searchMode
-    const headerText = this.state.gameListHeader;
-    let searchIcon = '';
-    let searchType = '';
-    if (searchMode == 'public'){
-      searchIcon = 'earth'
-      searchType = 'antdesign'
+  
+  getTeamFromUsername = (username) =>{
+    teamList = this.state.teamData;
+    myTeam = 'none';
+    //return "none" // TODO: REMOVE THISSS------------------------------------------------------=-=-=-=-=-=-
+    if (teamList == null || teamList == undefined || teamList.length == 0){
+      console.log("No Teams")
+      return {name: "None", color: "#EEEEEE"}
     } else{
-      searchIcon = 'key'
-      searchType = 'entypo'
+      if (teamList.length == 0){ // No teams have been created/assigned to game yet
+        console.log("No Teams");
+        return {name: "None", color: "#EEEEEE"}
+      } else{
+        for (var i = 0; i < teamList.length; i++){
+          let team = teamList[i];
+          let playerList = team.players;
+          for (var j = 0; j < playerList.length; j ++){
+            let mplayer = playerList[j];
+            pusername = mplayer.username;
+            if (pusername == username) {
+              myTeam = team;
+              break;
+            }
+          }
+        }
+      }
+    }
+    return myTeam;
+  }
+// Team Picking and Adssignment!!!
+
+
+
+
+unassignTeam = (team,player) =>{
+  console.log("Removing team assignment");
+
+  //this.requestUnassignPlayer() /DELETE /player/team/username/team_id
+}
+
+assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, then refresh list?
+  const teamList = this.state.teamData
+  selectedTeam = teamList[teamIndex];
+  console.log("Assigntin",player,selectedTeam.name);
+  if (false){ // Extra validation here?
+    console.log("No");
+    // Put Toast?
+    return false;
+  }
+  // Append player to team
+  selectedTeam.players.push(player);
+  teamList[teamIndex] = selectedTeam;
+  this.setState({teamData: teamList});
+  console.log("Updated Team",teamList,"---",selectedTeam);
+  // Send request to assign team -- Oor just have it wait before assigning and pull Directly from DB
+  // Refreash at end of rewquest
+}
+
+  renderTeamPicker = (playerTeam,player) => {
+    const gameData = this.state.gameData;
+    let teamItems = this.state.teamData.map( (team, index) =>{
+      return team.name
+    });
+    // Use populated availible teams instyed??
+    console.log("player",player)
+    if (this.state.isHost){
+      if (playerTeam == "none"){ // Then check if needs team and if teamPicking is manual
+        if (gameData.team_selection == 'manual') {
+          //console.log("Displaying team picker");
+          /*return(
+            <View>
+            <Picker
+                selectedValue={0}
+                onValueChange={ (teamSelect) => {console.log("TReamSelct",teamSelect);} } >
+                {teamItems}
+            </Picker>
+            </View>
+          )*/
+          return (
+            <ModalDropdown 
+            defaultValue = "Assign"
+            onSelect = { selectedTeamIndex => this.assignTeam(selectedTeamIndex,player)}
+            options={teamItems}/> 
+          )
+        }
+      }
+    } else{
+
     }
     return (
-        <ListItem
-          containerStyle = {{
-            backgroundColor: '#ae936c',
-            margin: 0
-          }}
-          onPress={() => this.switchSearchMode()}
-          title={headerText}
-          leftIcon={{ name: searchIcon, type: searchType }}
-          bottomDivider
-        />
-      )    
+      <Text></Text>
+    )
   }
-      getTeamFromUsername = (username) =>{
-        teamList = this.state.teamData;
-        myTeam = 'none';
-        //return "none" // TODO: REMOVE THISSS------------------------------------------------------=-=-=-=-=-=-
-        if (teamList == null || teamList == undefined || teamList.length == 0){
-          console.log("No Teams")
-          return {name: "None", color: "#EEEEEE"}
-        } else{
-          if (teamList.length == 0){ // No teams have been created/assigned to game yet
-            console.log("No Teams");
-            return {name: "None", color: "#EEEEEE"}
-          } else{
-            for (var i = 0; i < teamList.length; i++){
-              let team = teamList[i];
-              let playerList = team.players;
-              for (var j = 0; j < playerList.length; j ++){
-                let mplayer = playerList[j];
-                pusername = mplayer.username;
-                if (pusername == username) {
-                  console.log("Fouhnd match", username);
-                  myTeam = team;
-                  break;
-                }
-              }
-            }
-          }
-        }
-        return myTeam;
-      }
-
-      renderTeamPicker = (playerTeam) => {
-        const gameData = this.state.gameData;
-        let teamItems = this.state.teamData.map( (team, index) =>{
-          return team.name
-        });
-        if (!this.state.isHost){
-          if (playerTeam == "none"){ // Then check if needs team and if teamPicking is manual
-            if (gameData.team_selection == 'manual') {
-              console.log("Displaying team picker");
-              /*return(
-                <View>
-                <Picker
-                    selectedValue={0}
-                    onValueChange={ (teamSelect) => {console.log("TReamSelct",teamSelect);} } >
-                    {teamItems}
-                </Picker>
-                </View>
-              )*/
-              return (
-                <ModalDropdown 
-                defaultValue = "Select Team"
-                options={teamItems}/> 
-              )
-            }
-          }
-        } else{
-
-        }
-        return (
-          <Text>Team!</Text>
-        )
-      }
       renderPlayer= ({ item }) => {
         //console.log(this.state.playerList,this.state.teamData);
         gameStyle = this.state.gameData.style;
         let teamData = this.getTeamFromUsername(item.username)
         let gameIcon = ''
-        console.log("TEaminfo",teamData);
+        //console.log("TEaminfo",teamData);
         if (gameStyle == 'solo'){ // Dont render Team, render color
           gameIcon = 'user';
           teamData = 'item.color?'
@@ -359,7 +363,7 @@ export default class GameLobbyScreen extends Component {
             color: teamData.color,
             
           }}
-          rightSubtitle = {this.renderTeamPicker(teamData)}
+          rightSubtitle = {this.renderTeamPicker(teamData,item)}
           leftIcon={{ name: 'user', type: 'feather', color: teamData.color} /*Could be Avatar as well? or team/League indicator */}
           bottomDivider
         />
@@ -390,9 +394,9 @@ export default class GameLobbyScreen extends Component {
              }} />
           )
         }
-          if (playerList.length == 0){ /* Should be impossible because host is joined */
+          if (playerList.length == 0){ /* Should be impossible because host is joined */ // If it is A tem list, have it say players assinged instead of joined
             return (
-                  <Text>No Players Joined Yet</Text>
+                  <Text>No Players Assigned</Text>
             )
           } else{
             return(

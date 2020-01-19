@@ -299,8 +299,8 @@ export default class JoinGameScreen extends Component {
           return false;
         }
       }
-      keyExtractor = (item, index) => {
-      }
+      
+      keyExtractor = (item, index) =>index.toString()
       renderGameList = () => {
         const gameList = this.state.gameList;
         if (gameList == undefined){
@@ -396,9 +396,10 @@ export default class JoinGameScreen extends Component {
           gameIcon = 'users';
           teamInfo = item.num_teams + ' Teams'
         }
+        console.log("RENDERGAM",item.id)
         return (      
         <ListItem
-          key = {item.id}
+          key = {"Game"+item.id}
           onPress={() => this.joinPressed(item) }
           title={item.name}
           subtitle={gameTimeStamp}
@@ -419,7 +420,9 @@ export default class JoinGameScreen extends Component {
       renderSpinner = () => {
         if (this.state.loading == true){
           return(
-            <Spinner style = {{height:5,
+            <Spinner 
+              key="spiner"
+              style = {{height:5,
               paddingTop: 43,
               paddingLeft: 15,
               justifyContent: 'center', 

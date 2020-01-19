@@ -312,11 +312,6 @@ export default class HostScreen extends Component {
   }
 
 
- 
-
-
-
-
 /* INPUTS NEEDED TO CREATE A GAME:::
   General Game Creation: 
     /create/game
@@ -339,6 +334,35 @@ export default class HostScreen extends Component {
     /createbatch/assignment,
     [teamID,username]
   */ // Unsure what to do or how to make these look good
+
+  renderNameCodeInputs = () =>{
+    
+    return (
+    <Container style = {{flex: 0.5, flexDirection: 'column', backgroundColor: '#EEEEEE', marginTop: 2}}>     
+      <Input inputStyle={{ height: Container_Height/1.5}}
+            value = {this.state.gameName}
+            autoCompleteType = 'off'
+            placeholder='Game Name'
+            returnKeyType='done'
+            leftIcon={{ type: 'font-awesome', name: 'user' }}
+            errorMessage= {this.state.gameNameError}
+            onChangeText={this.editGameName}
+          />
+          <Input
+            inputStyle={{ height: Container_Height/2}}
+            value = {this.state.gameCode}
+            autoCompleteType = 'off'
+            placeholder='Game Code (If private)'
+            returnKeyType='done'
+            leftIcon={{ type: 'entypo', name: 'key' }}
+            errorMessage= {this.state.codeError}
+            onChangeText={this.editGameCode}
+          />
+          </Container>
+    )
+  }
+
+
   soloButton = () => <View icon={<Icon name = 'user' size = {15}  color= "white"   type = 'feather' />}
                             title= "Free For All" ></View>
   teamButton = () => <View icon={<Icon name = 'users' size = {15}  color= "white"   type = 'feather' />}
@@ -355,7 +379,7 @@ export default class HostScreen extends Component {
     const gameModeIndex  = this.state.gameModeIndex
     const gameIcon = (gameModeIndex == 0) ? 'user' : 'users';
     return (
-      <Container style = {{flex: 0.2, backgroundColor: '#EEEEEE', marginTop: 4}}>
+      <Container style = {{flex: 0.3, backgroundColor: '#EEEEEE', marginTop: 4}}>
       <View style={{ backgroundColor: 'ae93Bf', flexDirection: 'row', marginTop: 0, justifyContent: 'center', alignContent: 'center'}}>
        <Icon name = {gameIcon} size = {18}  color= "black"  type = 'feather' > </Icon>
         <Text style = {{ color: '#4a4a4a',
@@ -544,7 +568,7 @@ export default class HostScreen extends Component {
     }
     //this.setState({teamList});
     return(
-      <View style ={{ flex:1 }}>
+      <View style ={{ flex:0.4 }}>
     <FlatList
             listKey = "team"
             keyExtractor={this.TeamTempExtractor}
@@ -570,7 +594,7 @@ export default class HostScreen extends Component {
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
            <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-              <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{prereqText}: </Text>
+              <Text style={{ alignSelf: 'center', margin: 3, fontSize:22}}>{prereqText}: </Text>
             </View>
             <NumericInput 
               value={this.state.num_teams} 
@@ -601,7 +625,7 @@ export default class HostScreen extends Component {
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
            <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-            <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{liveText} </Text>
+            <Text style={{ alignSelf: 'center', margin: 3, fontSize:22}}>{liveText} </Text>
           </View>
             <NumericInput 
               value={this.state.num_lives} 
@@ -629,7 +653,7 @@ export default class HostScreen extends Component {
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
            <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-            <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>{liveText} </Text>
+            <Text style={{ alignSelf: 'center', margin: 3, fontSize:22}}>{liveText} </Text>
           </View>
             <NumericInput 
               value={this.state.timeDisabled} 
@@ -657,7 +681,7 @@ export default class HostScreen extends Component {
     return (
           <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
           <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-           <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:24}} >Ammo:</Text>
+           <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:22}} >Ammo:</Text>
          </View>
            <NumericInput 
              value={this.state.ammo} 
@@ -760,32 +784,7 @@ export default class HostScreen extends Component {
       )
   }
 
-  renderNameCodeInputs = () =>{
-    
-    return (
-    <Container style = {{flex: 0.3, flexDirection: 'column', backgroundColor: '#EEEEEE', marginTop: 4}}>     
-      <Input style={{ height: Container_Height}}
-            value = {this.state.gameName}
-            autoCompleteType = 'off'
-            placeholder='Game Name'
-            returnKeyType='done'
-            leftIcon={{ type: 'font-awesome', name: 'user' }}
-            errorMessage= {this.state.gameNameError}
-            onChangeText={this.editGameName}
-          />
-          <Input
-            style={{ height: Container_Height}}
-            value = {this.state.gameCode}
-            autoCompleteType = 'off'
-            placeholder='Game Code (If private)'
-            returnKeyType='done'
-            leftIcon={{ type: 'entypo', name: 'key' }}
-            errorMessage= {this.state.codeError}
-            onChangeText={this.editGameCode}
-          />
-          </Container>
-    )
-  }
+  
 
   render() {
       return (

@@ -73,7 +73,11 @@ export default class BluetoothManager extends Component {
       this.setState({ scanning: false });
       }); 
   }
-
+  
+  gotoGunScreen(){
+    this.props.navigation.navigate("Gun");
+  }
+  
   loadStorage = () => {
     console.log("loading storage");
     global.storage.load ({
@@ -391,24 +395,18 @@ export default class BluetoothManager extends Component {
   }
 
   checkGunConnection(){
-    console.log("Checking for connected Gun",this.props.screen);
+    //console.log("Checking for connected Gun",this.props.screen);
     if (this.state.connectedGun == null){
-      console.log("Gun not loaded yet")
+      //console.log("Gun not loaded yet")
       return false;
     }
     gunID = this.state.connectedGun.id;
     let connectedGun = this.state.connectedGun
     //console.log("Checking if connected gun",gunID);
-    //const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
     BleManager.isPeripheralConnected(gunID, []) // Possibly add gunService uuid in to array
       .then((isConnected) => {
         if (isConnected) {
           console.log('Gun IS connected!');
-          //if (updateListeners.length == 0 ){
-           //   console.log("Connected and have no Listeneres",updateListeners)
-          //} else{
-           //   console.log("connecgted and has listners'",updateListeners)
-          //}
           this.state.connectedGun.connected = true;
           this.setState({connectedGun})
           this.saveGunConnection(this.state);
@@ -417,12 +415,6 @@ export default class BluetoothManager extends Component {
           let connectedGun = this.state.connectedGun;
           connectedGun.connected = false;
           this.setState({connectedGun});
-          if (updateListeners.length == 0 ){
-            //console.log("Not connected and have no Listeneres",updateListeners)
-          } else{
-            //console.log("Not con and has listeners'",updateListeners)
-          }
-          //this.setState({connectedGun: null})
           this.saveGunConnection(this.state);
         }
       }) ;
@@ -599,8 +591,10 @@ toggleGunConnection(peripheral) {
       } else{
         conGun = false
       }
+    } else{
+      conGun = false;
     }
-    console.log("REndering GUn Status",conGun);
+    //console.log("REndering GUn Status",conGun);
     const statusColor = conGun? '#99ff99' : '#ffc1cc'; 
     return(
         <View style= {{backgroundColor: '#ae936c'}}>
