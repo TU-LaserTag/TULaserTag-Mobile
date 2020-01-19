@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {StyleSheet,View,Dimensions, ViewBase} from 'react-native';
+import {NativeModules,View,Dimensions, NativeEventEmitter} from 'react-native';
 import { ThemeProvider , Input, Icon, Text, Button, Slider, ListItem, ButtonGroup,Card} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader'
@@ -8,9 +8,14 @@ import { FlatList } from 'react-native-gesture-handler';
 import {Web_Urls} from '../constants/webUrls';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput from 'react-native-numeric-input'
+import BluetoothManager from '../components/Ble_manager'
+import ModalDropdown from 'react-native-modal-dropdown';
+
 const dimensions = Dimensions.get('window');
 const Container_Width = Math.round(dimensions.width *1/3);
 const Container_Height = Math.round(dimensions.height * 1/20);
+const BleManagerModule = NativeModules.BleManager;
+const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 export default class HostScreen extends Component {
   static navigationOptions = {
     title: 'Host Game', // Possibly have it dynamic to name
@@ -29,7 +34,9 @@ export default class HostScreen extends Component {
       loading: true,
       gameList: [],
       joinGameError: false,
-      gameListHeader: '',
+      teamLoadError: '',
+      teamList: [],
+      availibleTeams: [],
 
       gameModeIndex: 0,
       gameModeText: 'solo',
@@ -58,11 +65,7 @@ export default class HostScreen extends Component {
     //this.checkBLE(); Should get ran in GunStatusDisplay
     //this.loadStorage()  // Checks storage and then builds upon startBLEManager
     
-    //this.joinGameHandleDiscoverPeripheral = this.joinGameHandleDiscoverPeripheral.bind(this);
-    //this.joinGameHandleStopScan = this.joinGameHandleStopScan.bind(this);
-    //this.joinGameHandleUpdateValueForCharacteristic = this.joinGameHandleUpdateValueForCharacteristic.bind(this);
-    //this.joinGameHandleDisconnectedPeripheral = this.joinGameHandleDisconnectedPeripheral.bind(this);
-    //this.joinGameHandleAppStateChange = this.joinGameHandleAppStateChange.bind(this);
+    
     this.updateIndex = this.updateIndex.bind(this)
   }
   componentDidMount(){
@@ -70,8 +73,19 @@ export default class HostScreen extends Component {
     const userData = this.props.navigation.getParam("userData", null);
     const host = userData.username;
     this.setState({host, userData})
+    this.requestAllTeams();
+    this.populateTemplateTeams();
+    
   } 
 
+  componentWillUnmount() { // cancel all async tasks herere?
+    console.log("Unmounting host")
+    var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+    var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+    var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+    var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+    console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
+  }
 
   createGame = () =>{
     // Set 0s to -1 for infinite here
@@ -118,6 +132,34 @@ export default class HostScreen extends Component {
         //this.sendCreateGameRequest(GamePayload);
         this.handleCreateGameResponse("noope");
   }
+  requestAllTeams() { // Request all Teams
+    this.setState({loading: true,
+                    all_teams: [],
+                    teamLoading: true,
+    })
+    var getURL = Web_Urls.Host_Url + "/team"
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          responseList = JSON.parse(request.response);
+          //console.log
+          this.handleTeamListResponse(responseList);
+        } else {
+        
+          this.setState({teamLoadError: "Could not load teams,",
+                       loading: false}); 
+          // FOR USE OFFLINE    
+          responseList =[{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null},{"id":18,"name":"Copycats","color":"#109876","league_id":null},{"id":20,"name":"","color":"#09ff11","league_id":null},{"id":21,"name":"","color":"#0bf5ee","league_id":null},{"id":22,"name":"","color":"#497c21","league_id":null},{"id":23,"name":"","color":"#f1f40b","league_id":null},{"id":24,"name":"","color":"#f10b0b","league_id":null},{"id":19,"name":"Hogan's Heroes","color":"#fa7c18","league_id":null}]
+          this.handleTeamListResponse(responseList);
+        }
+      }
+      request.open('GET', getURL);
+      request.send();
+  }
 
   sendCreateGameRequest(payload) {
     var getURL = Web_Urls.Host_Url + "/create/game"  
@@ -143,8 +185,35 @@ export default class HostScreen extends Component {
       request.send(JSON.stringify(payload)); // Strigify?
   }
   
+  requestCreateTeams(gameData){ 
+    gameID = gameData.id;
+    payload = this.state.teamList; // TEams sent
+    var getURL = Web_Urls.Host_Url + "/createbatch/team/"+gameID;  
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          teamResponse = JSON.parse(request.response);
+          console.log("GOT BatchTeam",teamResponse)
+          this.handleCreateTeamsResponse(teamResponse,gameData);
+        } else {
+          console.log("Got Error",request);
+          // Needs more error handling
+          //this.setState({joinGameError: "Could not connect to server, Please try again later",
+          //              loading: false});     
+        }
+      }
+      console.log("Creating teams at",getURL); 
+      request.open('POST',getURL);
+      request.setRequestHeader("Content-type","application/json");
+      console.log("Sending",payload)
+      request.send(JSON.stringify(payload)); // Strigify?
+  }
+
   handleCreateGameResponse = (gameResponse) =>{
-    console.log("Navigating with response",gameResponse);
+    console.log("Got Game Cfreations REsponse",gameResponse);
     DummyGameResponse = {
       "code": "",
       "date": "01-18-2020",
@@ -166,9 +235,23 @@ export default class HostScreen extends Component {
       "winners": null,
     };
     
+    this.requestCreateTeams(DummyGameResponse); // Just passes it through to prevent state Setting -- REplace with gameResponse
+
+    
+  }
+  handleCreateTeamsResponse = (teamResponse,gameData) => {
+    console.log(" Got Team response",teamResponse);
+    // Validate more?
     this.props.navigation.navigate("Lobby",{userData: this.state.userData,
-                                          gameData: DummyGameResponse,
-                                          });
+      gameData: gameData,
+      teamData: teamResponse
+      });
+  }
+  handleTeamListResponse = (teamResponse) =>{
+    //console.log("Handling Respons",teamResponse);
+    //  Do any other validating/filtering here  ** Possibly dont show ones that are not in a league
+    this.setState({all_teams: teamResponse});
+    this.populateAvailibleTeams();
   }
 
   updateIndex = (gameModeIndex) => {
@@ -227,6 +310,13 @@ export default class HostScreen extends Component {
       return (<View/>)
     }
   }
+
+
+ 
+
+
+
+
 /* INPUTS NEEDED TO CREATE A GAME:::
   General Game Creation: 
     /create/game
@@ -265,7 +355,7 @@ export default class HostScreen extends Component {
     const gameModeIndex  = this.state.gameModeIndex
     const gameIcon = (gameModeIndex == 0) ? 'user' : 'users';
     return (
-      <Container style = {{flex: 0.4, backgroundColor: '#EEEEEE', marginTop: 4}}>
+      <Container style = {{flex: 0.2, backgroundColor: '#EEEEEE', marginTop: 4}}>
       <View style={{ backgroundColor: 'ae93Bf', flexDirection: 'row', marginTop: 0, justifyContent: 'center', alignContent: 'center'}}>
        <Icon name = {gameIcon} size = {18}  color= "black"  type = 'feather' > </Icon>
         <Text style = {{ color: '#4a4a4a',
@@ -308,6 +398,166 @@ export default class HostScreen extends Component {
      </Container>
     )
   }
+  populateAvailibleTeams = () => { // Use (FINISH) this if we want dropdown list to shrink with selection
+    //console.log("Populatinga vailible teams");
+    const all_teams = this.state.all_teams;
+    //console.log(all_teams)
+    let availibleTeams = all_teams.map( (team) =>{
+      if (team.name != ""){
+        return team.name;
+      } else{
+        return "Team " + team.id
+      }
+    });
+    this.setState({availibleTeams})
+    //console.log("Set teams",this.state.availibleTeams)
+  }
+  updateAvailibleTeams = () =>{
+    // So far just iterates over teamList, reMaps availibleList 
+  
+  }
+  populateTemplateTeams = () => {
+    const teamList = this.state.teamList;
+    for (i = 1; i <=this.state.num_teams; i ++){
+      teamList.push({color: "", name:"New Team "+i, team_id:null});
+    }
+      this.setState({teamList});
+  }
+  updateNumTeams = num_teams =>{
+    const teamList = this.state.teamList;
+    const listlen = teamList.length;
+    if (listlen < num_teams){
+      for (i = listlen; i <num_teams; i ++){
+        let index = i+1;
+        teamList.push({id:index, name:"Team "+index, key:"t"+index});
+      }
+    } else if (listlen > num_teams){
+      for (i = 0; i < listlen - num_teams; i ++){
+        teamList.pop();
+      }
+    }
+    this.setState({teamList,num_teams});
+  }
+  TeamTempExtractor = (item, index) =>index.toString()
+  
+  isAlreadySelected = (teamName) =>{
+    const teamList = this.state.teamList;
+    const found = teamList.some(team => team.name === teamName); // Search by team_id if needed? (null?)
+    return found;
+  }
+
+  selectTeam = (teamIndex,itemIndex) =>{ // Will need to be aware of filtered lists>? filter directly before/after fetch/state assignment to prevent errors
+    const all_teams = this.state.all_teams;
+    const teamList = this.state.teamList;
+    const availibleTeams = this.state.availibleTeams;
+    selectedTeam = all_teams[teamIndex];
+    if (this.isAlreadySelected(selectedTeam.name)){
+      console.log("No");
+      // Put Toast?
+      return false;
+    }
+    newTeaminfo = {name: selectedTeam.name, color:selectedTeam.color, team_id: selectedTeam.id}
+    // Setting eeach one individually since bulk seting does not seem to work
+    teamList[itemIndex].name = newTeaminfo.name;
+    teamList[itemIndex].color = newTeaminfo.color;
+    teamList[itemIndex].team_id = newTeaminfo.team_id;
+
+    this.setState({teamList: teamList});
+  }
+
+  renderTeamPicker = (index,item) => {
+    const all_teams = this.state.all_teams;
+    let availibleTeams = this.state.availibleTeams;
+    // Clean up undefined teams??
+    // For loop that removes items with name of :"" or undefined
+    return (
+      <ModalDropdown 
+      defaultValue = "Select Team"
+      onSelect = { selectedIndex => this.selectTeam(selectedIndex,index)}
+      options={availibleTeams}/> 
+    )
+  }
+
+  renderTeamItem = (teamTemp) => {
+    const index = teamTemp.index;
+    const item = teamTemp.item;
+    const selectedTeam = this.state.teamList[index];
+    /* IF WE WANT TO ALLOW THEM TO EDIT New TeamNames priliminarily, use these*
+    return(
+      <View>
+      <Input style={{ height: 15}}
+            value = {this.state.teamList[index].name}
+            autoCompleteType = 'off'
+            placeholder='Team Name'
+            returnKeyType='done'                     
+            onChangeText={teamNameInput => {
+              const teamList = this.state.teamList;
+              teamList[index].name = teamNameInput;
+              this.setState({teamList: teamList})}} 
+          />
+      </View>
+    )*/
+    let teamColor = "gray";
+    let isNewText = 'New Team'
+    if (selectedTeam.color != ""){
+      teamColor = selectedTeam.color;
+      isNewText = "Selected Team"
+    }
+    
+    //console.log("Rendering TEamStu",index,"-----",item);
+    return( <View>
+        <ListItem
+          style = {{color: teamColor /**Would be nice to have preliminary generated colors for new teams to show them here */}}
+          key = {item.name}
+          title={item.name}
+          titleStyle = {{fontSize: 12, color: teamColor}}
+          containerStyle = {{
+            backgroundColor: "#FFFFFF"
+          }}
+          subtitle={isNewText}
+          subtitleStyle = {{
+            fontSize: 10,
+            color: 'gray',
+            
+          }}
+          rightSubtitle = {this.renderTeamPicker(index,item)}
+          leftIcon={{ name: 'users', type: 'feather', color: teamColor} /*Could be Avatar as well? or team/League indicator */}
+          bottomDivider
+        />
+    </View>
+    )
+  }
+
+  renderTeamTemplate = (num_teams) =>{
+    const prereqText = ((this.state.gameModeIndex == 0 ) ? "Players":"Teams" );
+    const teamList = this.state.teamList; // TODO: CHECK Effifciency for starting from scratch or pulling from state
+    if (prereqText == "Players"){
+      return(
+        <View></View>
+      )
+    }
+    
+    if (num_teams == 0){
+      console.log("Should not be possible");
+      return (<Text>You should never see this... hacker</Text>);
+    } else{
+    }
+    //this.setState({teamList});
+    return(
+      <View style ={{ flex:1 }}>
+    <FlatList
+            listKey = "team"
+            keyExtractor={this.TeamTempExtractor}
+            data={teamList}
+            renderItem={this.renderTeamItem}
+            extraData={this.state}
+          />
+    </View>
+    )
+
+    }
+  
+
   renderTeamNumberPicker = () => {
     const prereqText = ((this.state.gameModeIndex == 0 ) ? "Players":"Teams" );
     if (prereqText == "Players"){
@@ -315,6 +565,8 @@ export default class HostScreen extends Component {
         <View></View>
       )
     }
+    const teamList = [];
+    
     return(
       <Container style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
            <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
@@ -322,7 +574,7 @@ export default class HostScreen extends Component {
             </View>
             <NumericInput 
               value={this.state.num_teams} 
-              onChange={num_teams => this.setState({num_teams})} 
+              onChange={this.updateNumTeams}
               onLimitReached={(isMax,msg) => console.log(isMax,msg)}
               totalWidth={Container_Width} 
               totalHeight={Container_Height} 
@@ -339,6 +591,7 @@ export default class HostScreen extends Component {
               <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
               <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Number of Teams</Text>
               </View>
+             
       </Container>
     )
   }
@@ -510,7 +763,7 @@ export default class HostScreen extends Component {
   renderNameCodeInputs = () =>{
     
     return (
-    <Container style = {{flex: 0.6, flexDirection: 'column', backgroundColor: '#EEEEEE', marginTop: 4}}>     
+    <Container style = {{flex: 0.3, flexDirection: 'column', backgroundColor: '#EEEEEE', marginTop: 4}}>     
       <Input style={{ height: Container_Height}}
             value = {this.state.gameName}
             autoCompleteType = 'off'
@@ -539,18 +792,22 @@ export default class HostScreen extends Component {
         <ThemeProvider {...this.props}  theme={LaserTheme}>
           
           <CustomHeader {...this.props} headerText= "Host Game" headerType = "host" />
+          <BluetoothManager {...this.props} screen= "Host"></BluetoothManager>
           
           {this.renderNameCodeInputs()}
           {this.renderGameModeButtons()}
+          <View style={{flex: 2}}>
           {/*No Setting dates for now from the appthis.renderDatePicker()*/}
           {this.renderTeamNumberPicker()}
+          {this.renderTeamTemplate(this.state.num_teams)}
           {this.renderTeamSelectionModeButtons()}
           {this.renderGameLengthPicker()}
 
           {this.renderLivesNumberPicker()}
           {this.renderCooldownNumberPicker()}
           {this.renderAmmoSelection()}
-          <Button title= "Begin Hosting" onPress={() => this.createGame()}/>
+          <Button style={{marginBottom: 15}}title= "Begin Hosting" onPress={() => this.createGame()}/>
+          </View>
          
         </ThemeProvider>
       );

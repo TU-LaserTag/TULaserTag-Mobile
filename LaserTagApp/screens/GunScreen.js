@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet,NativeEventEmitter,NativeModules} from 'react-native';
 import {
   Text,
   View,
@@ -8,14 +8,16 @@ import {
 } from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 
-import { Button, ThemeProvider, Input } from 'react-native-elements'; 
+import { Button, ThemeProvider, ListItem,Divider, Input} from 'react-native-elements'; 
 import { LaserTheme } from '../components/Custom_theme';
 import BluetoothManager from '../components/Ble_manager'
-
+//const BleManagerModule = NativeModules.BleManager;
+//const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import BluetoothSerial from 'react-native-bluetooth-serial'
 //import "../components/Blue_tooth"
 export default class GunScreen extends Component {
   constructor (props) {
+    //BM  = new BluetoothManager();
     super(props)
     this.state = {
       isEnabled: false,
@@ -23,11 +25,23 @@ export default class GunScreen extends Component {
       devices: [],
       unpairedDevices: [],
       connected: false,
+
     }
   }
   componentDidMount(){
-    console.log("Mounted")
+    console.log("Gun Screden Mount");
+    //this.setState({BluetoothM.state})
   }
+  
+  componentWillUnmount() { // cancel all async tasks herere?
+    console.log("Unmounting gunscreen")
+    //var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+    //var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+    //var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+    //var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+    //console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
+  }
+
   _renderItem(item){
 
     return(<View style={styles.deviceNameWrap}>
@@ -35,12 +49,16 @@ export default class GunScreen extends Component {
           </View>)
   }
   render() {
-
+   
     return (
       <ThemeProvider theme={LaserTheme}>
         <CustomHeader {...this.props} headerText = "Connect to Gun" headerType = "gun"/>
-        <BluetoothManager>
-          </BluetoothManager>
+        <ThemeProvider theme={LaserTheme}>
+        <BluetoothManager {...this.props} screen= "Gun"></BluetoothManager>
+        
+        
+        </ThemeProvider>
+       
       </ThemeProvider>
     )
   }

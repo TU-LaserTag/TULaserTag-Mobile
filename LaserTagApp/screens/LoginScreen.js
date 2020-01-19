@@ -109,7 +109,8 @@ export default class LoginScreen extends Component {
           username: data.username,
           userid: data.userid,
           password: data.pass,
-          role: data.role
+          role: data.role,
+          gun_address: null
         }
       })
     }

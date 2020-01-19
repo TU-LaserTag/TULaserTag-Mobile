@@ -41,7 +41,7 @@ console.disableYellowBox = false;
 //---------------- Exported data---------------------- \\
 export default class App extends React.Component {
   componentWillUnmount(){
-    console.log("UNMOUNTING");
+    console.log("UNMOUNTIHNG APP");
   }
   render() {
     return <AppContainer />;

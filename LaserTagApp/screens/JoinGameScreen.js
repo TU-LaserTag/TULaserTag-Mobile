@@ -5,7 +5,7 @@ import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader';
 import GunStatusDisplay from '../components/GunStatusDisplay'
 import { stringToBytes, bytesToString } from 'convert-string';
-import BleManager, { connect } from 'react-native-ble-manager';
+import BluetoothManager from '../components/Ble_manager'
 import {Web_Urls} from '../constants/webUrls';
 import { Item } from 'native-base';
 const BleManagerModule = NativeModules.BleManager;
@@ -21,6 +21,7 @@ export default class JoinGameScreen extends Component {
   constructor(){
     super()
     this.state = {
+      userData: null,
       scanning:false,
       key: '',
       appState: '',
@@ -28,6 +29,7 @@ export default class JoinGameScreen extends Component {
       keyError: '',
       discoveredP: false,
       loading: true,
+      loadingGame: false,
       gameList: [],
       joinGameError: false,
       gameListHeader: '',
@@ -81,54 +83,19 @@ export default class JoinGameScreen extends Component {
     };
     componentDidMount(){
         console.log("Join Game Mount")
-        AppState.addEventListener('change', this.joinGameHandleAppStateChange);
-        //const data = this.props.navigation.getParam("varName", "None") or else none
-        const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-        const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-        const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-        const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-
-        if (discoverListeners.length <= 1) {
-            console.log("Joinscreen discover listener");
-            this.joinGameHandlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.joinGameHandleDiscoverPeripheral );
-        }
-        if (stopListeners.length <= 1) {
-          console.log("Joinscreen Stop listener");
-          this.joinGameHandlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.joinGameHandleStopScan );
-        }
-        if (disconnectListeners.length <= 1) {
-          console.log("JoinScreen disconnect listener");
-          this.joinGameHandlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.joinGameHandleDisconnectedPeripheral );
-        }
-        if (updateListeners.length <= 1) {
-          console.log("JoinScreen updateListener");
-          this.joinGameHandlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.joinGameHandleUpdateValueForCharacteristic );
-        }
-        // Temporarily here to test Game display functionality
-        this.requestGames();
+        const userData = this.props.navigation.getParam("userData", null);
+        this.setState({userData})
+        this.refresh();
         
     } 
 
     componentWillUnmount() { // cancel all async tasks herere? Appstate change?
-      console.log("unmouting JoinScreen status");
+      console.log("unmouting JoinScreen ");
       var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
       var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
       var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
       var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
       console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
-  
-      if (discoverListeners.length > 0){
-          this.joinGameHandlerDiscover.remove('BleManagerDiscoverPeripheral');
-      }
-      if (stopListeners.length >0){
-        this.joinGameHandlerStop.remove('BleManagerStopScan');
-      }
-      if (disconnectListeners.length > 0){
-        this.joinGameHandlerDisconnect.remove('BleManagerDisconnectPeripheral');
-      }
-      if (updateListeners.length > 0){
-        this.joinGameHandlerUpdate.remove('BleManagerDidUpdateValueForCharacteristic');
-      }
     }
 
     // Handlers
@@ -208,12 +175,14 @@ export default class JoinGameScreen extends Component {
             }
             if (request.status === 200) {
               responseList = JSON.parse(request.response);
+              //console.log
               this.handleGameListResponse(responseList);
             } else {
               // Needs more error handling
               
-              //this.setState({joinGameError: "Could not connect to server, Please try again later",
-              //              loading: false});     
+              this.setState({joinGameError: "Could not connect to server, Please try again later",
+                           loading: false}); 
+              // FOR USE OFFLINE    
               responseList =[{"id":11,"starttime":null,"endtime":null,"maxammo":10,"style":"solo","timedisabled":10,"maxLives":2,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":0,"players_alive":null,"team_selection":"automatic","teams_alive":null,"locked":false,"name":"Skilled Shooting","host":"Caleb Anthony"},{"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":3,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Dranderson"}]
               this.handleGameListResponse(responseList);
             }
@@ -252,21 +221,28 @@ export default class JoinGameScreen extends Component {
           request.send();
       }
     
-      requestJoin(){
-        this.setState({loading: true})
-        const key =this.state.key;
-        var getURL = "Https://tuschedulealerts.com/game/code/"+key
+      requestJoin(game){
+        this.setState({loadingGame: true})
+        var getURL = Web_Urls.Host_Url +"/game/"+game.id+"/"+this.state.userData.username+"/"+ this.state.userData.gun_address
         console.log("Sending request to ",getURL)
-        fetch(getURL,{ 
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+        var request = new XMLHttpRequest();
+          request.onreadystatechange = (e) => {
+            if (request.readyState !== 4) {
+              return;
+            }
+            if (request.status === 200) {
+              response = JSON.parse(request.response);
+              console.log("Joining Game?",response)
+              this.handleJoinGame(response);
+            } else {
+              console.log("Error",request)
+              this.setState({joinGameError: "Could not Join Game",
+                            loading: false});     
+            }
           }
-        })
-        .then(handleGameListResponse)
-        .catch((error) => {console.log("OOF:"); console.error(error);});
-      }
+          request.open('GET', getURL);
+          request.send();
+        }
 
 
       handleGameListResponse(response) {
@@ -355,6 +331,7 @@ export default class JoinGameScreen extends Component {
           } else{
             return(
               <FlatList
+                listKey = "gameList"
                 keyExtractor={this.keyExtractor}
                 data={gameList}
                 renderItem={this.renderGame}
@@ -387,6 +364,7 @@ export default class JoinGameScreen extends Component {
         }
         return (
             <ListItem
+              key="header"
               containerStyle = {{
                 backgroundColor: '#ae936c',
                 margin: 0
@@ -420,7 +398,7 @@ export default class JoinGameScreen extends Component {
         }
         return (      
         <ListItem
-          key = {Item.id}
+          key = {item.id}
           onPress={() => this.joinPressed(item) }
           title={item.name}
           subtitle={gameTimeStamp}
@@ -456,7 +434,7 @@ export default class JoinGameScreen extends Component {
         return(
           <ThemeProvider {...this.props}  theme={LaserTheme}>
            <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Join Game" headerType = "join" />
-            <GunStatusDisplay updateConStatus = {this.updateConnectionStatus}></GunStatusDisplay>
+           <BluetoothManager {...this.props} updateConStatus = {this.updateConnectionStatus} screen= "Join"></BluetoothManager>
             <Input
               placeholder='Game Key (optional)'
               keyboardType='default'

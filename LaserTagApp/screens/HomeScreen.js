@@ -1,13 +1,14 @@
 import React, { Component } from 'react';
 import ButtonMenu from '../components/Button_menu'
 //import Icon from 'react-native-vector-icons/AntDesign';
-import { Dimensions, ActivityIndicator } from 'react-native';
+import { Dimensions, NativeEventEmitter,ActivityIndicator,NativeModules } from 'react-native';
 import { Container, Footer, FooterTab} from 'native-base';
 import CustomHeader from '../components/CustomHeader';
 import {LaserTheme} from '../components/Custom_theme';
-import BleManager, { connect } from 'react-native-ble-manager';
+import BluetoothManager from '../components/Ble_manager'
 import { Text,Button, ThemeProvider, Input, Divider, ListItem} from 'react-native-elements';
-//import LaserTheme from '../components/Custom_theme'
+//const BleManagerModule = NativeModules.BleManager;
+//const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 export default class HomeScreen extends Component {
   static navigationOptions = {
     title: 'Home', // Possibly have it dynamic to name
@@ -19,29 +20,15 @@ export default class HomeScreen extends Component {
 }
 componentDidMount() {
   console.log("HomeScreenMoubnt");
-  //AppState.addEventListener('change', this.handleAppStateChange);
-
-  //const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-  //const disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-  //const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-  //const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-
-  //if (discoverListeners.length <= 1) {
-  //    console.log("added discover listener");
-   //   this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral );
-  //}
-  //if (stopListeners.length <= 1) {
-    //console.log("added stop listener");
-   // this.handlerStop = bleManagerEmitter.addListener('BleManagerStopScan', this.handleStopScan );
-  //}
-  //if (disconnectListeners.length <= 1) {
-   // console.log("added disconnect listener");
-  //  this.handlerDisconnect = bleManagerEmitter.addListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral );
-  //}
-  //if (updateListeners.length <= 1) {
-    //console.log("added updateListener");
-    //this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
-  //}
+  
+}
+componentWillUnmount() { // cancel all async tasks herere?
+  console.log("Unmounting HomeScreen")
+ // var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+ // var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+ // var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+ // var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+  //console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
 }
  onMenuPress = (menuVal) => {
   const menuTranslater = this.state.menuTranslater
@@ -59,7 +46,7 @@ renderWelcome(){
     <Text 
       style={{
       color: 'white',
-      fontSize: 18,
+      fontSize: 15,
       margin: 0,
       backgroundColor: 'black',
       textAlign: 'center'
@@ -78,17 +65,16 @@ renderWelcome(){
     return (
       <ThemeProvider theme={LaserTheme}>
        <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
-        {this.renderWelcome()}
+       {this.renderWelcome()}
+       <BluetoothManager {...this.props} screen= "Home" ></BluetoothManager>
+
+        
         
         <ButtonMenu 
               menuOptions = {menuOptions}
               onPressItem = {this.onMenuPress}
         />
-        <Footer>
-          <FooterTab>
-            
-          </FooterTab>
-        </Footer>
+        
         </ThemeProvider>
       )
   }
