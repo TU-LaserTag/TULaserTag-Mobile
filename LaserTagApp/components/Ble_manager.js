@@ -168,7 +168,7 @@ export default class BluetoothManager extends Component {
     const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
     const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
 
-    console.log("AddinG Listeners",this.props.screen)
+    console.log("AddinG Listeners",this.props.screen,updateListeners,stopListeners)
     if (discoverListeners.length < 1) {
         console.log("added discover listener");
         this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
@@ -195,7 +195,7 @@ export default class BluetoothManager extends Component {
     var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
     var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
     var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-    console.log("Before",updateListeners,disconnectListeners,discoverListeners,stopListeners);
+    //console.log("Before",updateListeners,disconnectListeners,discoverListeners,stopListeners);
 
     if (discoverListeners.length > 0){
       bleManagerEmitter.removeListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral,false);
@@ -218,7 +218,7 @@ export default class BluetoothManager extends Component {
     disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
     discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
     stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-    console.log("after",updateListeners,disconnectListeners,discoverListeners,stopListeners);
+    //console.log("after",updateListeners,disconnectListeners,discoverListeners,stopListeners);
   }
   
 
@@ -236,7 +236,7 @@ export default class BluetoothManager extends Component {
   }
 
   componentDidFocus(){
-    console.log("Component Focused",this.props.screen);
+    console.log("Component Focused",this.props.screen); // NEED to make sure it is the only focused screen
     this.addListeners();
     this.loadStorage();
   }
@@ -280,6 +280,7 @@ export default class BluetoothManager extends Component {
       });
     }
    this.checkBLE();
+   this.loadStorage();
   }
   componentWillUnmount = () => { // cancel all async tasks herere?
     console.log("Unmounting",this.props.screen);
@@ -394,6 +395,9 @@ export default class BluetoothManager extends Component {
     });
   }
 
+  /*
+  */
+
   checkGunConnection(){
     //console.log("Checking for connected Gun",this.props.screen);
     if (this.state.connectedGun == null){
@@ -408,6 +412,10 @@ export default class BluetoothManager extends Component {
         if (isConnected) {
           console.log('Gun IS connected!');
           this.state.connectedGun.connected = true;
+          if (this.props.getGunData != undefined){ //-======############ NEED THIS TO TRANSFER gun data
+            console.log("Calling get gundata");
+            this.props.getGunData(connectedGun);
+          }
           this.setState({connectedGun})
           this.saveGunConnection(this.state);
         } else {
@@ -486,7 +494,9 @@ toggleGunConnection(peripheral) {
           peripheral.connected = true;
           this.setState({connectedGun: peripheral})
           console.log('Connected to ' + peripheral.id);
-          //console.log("State",this.state.connectedGun);
+          if (this.props.getGunData != undefined){ //-======############ NEED THIS TO TRANSFER gun data
+            this.props.getGunData(peripheral);
+          }
           this.setState({connectionError: ''})
           this.saveGunConnection(this.state);
           // SubScribe to notification

@@ -12,6 +12,7 @@ import { ScrollView, TouchableHighlight } from 'react-native-gesture-handler';
 import ModalDropdown from 'react-native-modal-dropdown';
 import { ColorPicker,toHsv, fromHsv } from 'react-native-color-picker'
 import BluetoothManager from '../components/Ble_manager';
+import { NavigationEvents } from 'react-navigation';
  
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -45,6 +46,7 @@ export default class GameLobbyScreen extends Component {
       gameData: {},
       teamData: [],
       userData: {},
+      gunData: {},
       detailedTeamData: [],
       playerList: [],
       isHost: false,
@@ -100,14 +102,20 @@ export default class GameLobbyScreen extends Component {
     this.setState({ key });
   };
 
+  getGunData = (gunData) =>{
+    //console.log("Recieved GunData",gunData);
+    this.setState({gunData});
+  } 
+
   componentDidMount(){
     const userData = this.props.navigation.getParam("userData", null);
     const gameData = this.props.navigation.getParam("gameData", null);
     const teamData = this.props.navigation.getParam("teamData",null);
+    const gunData = this.props.navigation.getParam("gunData",null);
     //this.setState({userData,gameData,teamData});
     //const 
     const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
-    const dummyTeamData = [{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
+    const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
     const dummyPlayerData = [{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"},{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]
     
     if (userData == null){
@@ -123,16 +131,16 @@ export default class GameLobbyScreen extends Component {
     
     //console.log("Loading data",gameData,userData,teamData);
     //this.requestGameData(gameData.id); // Maybe move to constructor?
-      
+    if (gunData == null){
+      console.log("GunData null")
+    } else{
+      console.log("Joining Game"); // Only if host?? -- Move to handle event of host screen?
+      this.requestJoinGame(userData,gameData,gunData);
+    }
   } 
 
   componentWillUnmount() { // cancel all async tasks herere? Appstate change?
       console.log("Unmounting lobbyy screen");
-      var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-      var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-      var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-      var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-      console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
   }
   
   gameLobbyHandleAppStateChange(nextAppState) {
@@ -167,14 +175,67 @@ export default class GameLobbyScreen extends Component {
       request.open('GET', getURL);
       request.send();
   }
+  requestAssignPlayer(team,player){ // Can be array of players
+    this.setState({loading: true }); // Different loading types??
+    const payload = [{team_id: team.id, player_username: player.username}];
+    const getURL = Web_Urls.Host_Url + "/createbatch/assignment"
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+    request.onreadystatechange = (e) => {
+      if (request.readyState !== 4) {
+        return;
+      }
+      if (request.status === 200) {
+        assignmentResponse = JSON.parse(request.response);
+        console.log("Success assigning player to team",assignmentResponse)
+        // update TeamData to contain that state
+        this.setState({loading: false})
+      } else {
+      console.log("assignment Errorr",request)
+      this.setState({loading: false});     
+      }
+    }
+    request.open('POST', getURL);
+    request.send(JSON.stringify(payload));
+ }
+  
+ requestPatchTeam(team,newName) {
+  this.setState({loading: true });
+  const teamId = team.id;
+  const payload = {name: newName, color: team.color};
+  const getURL = Web_Urls.Host_Url + "/change/team/"+teamId;
+  console.log("Sending request to ",getURL)
+  var request = new XMLHttpRequest();
+  request.onreadystatechange = (e) => {
+    if (request.readyState !== 4) {
+      return;
+    }
+    if (request.status === 200) {
+      updatedTeam = JSON.parse(request.response);
+      console.log("Success for editing team",updatedTeam)
+      // update TeamData to contain that state
+      this.setState({loading: false})
+    } else {
+    console.log("Team change error",request)
+    this.setState({loading: false});     
+    }
+  }
+  request.open('PATCH', getURL);
+  request.send(JSON.stringify(payload));
+ }
+
+  requestJoinGame(userData,gameData,gunData){
+    console.log("Joining",gameData,userData,gunData);
+  }
 
 
   editTeam = (team) =>{
     console.log("Editing team",team);
     if (this.state.editTeam != null){
-      console.log("Toggling edit",team.name,this.state.editTeam.name);
+      //console.log("Toggling edit",team.name,this.state.editTeam.name);
       if (this.state.editTeam.name == team.name){
-        console.log("Sending request to edit team",team,this.state.teamNameInput, this.state.temColorInput)
+        console.log("Sending request to edit team",team.name,this.state.teamNameInput);
+        this.requestPatchTeam(team,this.state.teamNameInput);
         this.setState({editTeam:null});
       } else{
         console.log("Editing a different team");
@@ -187,12 +248,12 @@ export default class GameLobbyScreen extends Component {
     
   }
 
-  onSatValPickerChange({ saturation, value }) { /* Semi Depreciated/ will keep here for FFA matched */
-    this.setState({
-      sat: saturation,
-      val: value,
-    });
-  }
+onSatValPickerChange({ saturation, value }) { /* Semi Depreciated/ will keep here for FFA matched */
+  this.setState({
+    sat: saturation,
+    val: value,
+  });
+}
 
   onHuePickerChange({ hue }) {
     this.setState({
@@ -284,7 +345,7 @@ unassignTeam = (team,player) =>{
 assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, then refresh list?
   const teamList = this.state.teamData
   selectedTeam = teamList[teamIndex];
-  console.log("Assigntin",player,selectedTeam.name);
+  //console.log("Assigntin",player,selectedTeam.name);
   if (false){ // Extra validation here?
     console.log("No");
     // Put Toast?
@@ -295,8 +356,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
   teamList[teamIndex] = selectedTeam;
   this.setState({teamData: teamList});
   console.log("Updated Team",teamList,"---",selectedTeam);
-  // Send request to assign team -- Oor just have it wait before assigning and pull Directly from DB
-  // Refreash at end of rewquest
+  this.requestAssignPlayer(selectedTeam,player);
+  // Refreash at end of rewquest // Or have Button at end that to click assign
 }
 
   renderTeamPicker = (playerTeam,player) => {
@@ -305,7 +366,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       return team.name
     });
     // Use populated availible teams instyed??
-    console.log("player",player)
+    //console.log("player",player)
     if (this.state.isHost){
       if (playerTeam == "none"){ // Then check if needs team and if teamPicking is manual
         if (gameData.team_selection == 'manual') {
@@ -494,19 +555,27 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
         const teamName = item.name;
         const teamColor = item.color;
         const teamPlayers = item.players;
+        let canEdit = false;
         let isEditing = false;
         if (this.state.editTeam != null){
            isEditing = (item.name == this.state.editTeam.name);
         }
         let iconName = ''
-        console.log("IsEditing",isEditing);
+        //console.log("IsEditing",isEditing);
         if (isEditing){
           iconName = "check" 
         } else{
           iconName = "square-edit-outline"
         }
         let cardTitle = <View></View>
-        if (this.state.isHost && !isEditing){ // HOSTTEST        
+
+        //Can Edit team checking
+        // Do a PATCH /name/{username}/{game_id}/{team_id} to psuh change to server
+        //console.log(teamName.slice(0,8));
+        if (teamName.slice(0,8) === "New Team"){ // && teamInfo.temp == true (If not league team)
+          canEdit = true;
+        }
+        if (this.state.isHost && canEdit && !isEditing){ // HOSTTEST        
            cardTitle = <View style = {{flex: 1, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
                             <Icon raised 
                               onPress={()=> this.editTeam(item)} 
@@ -518,7 +587,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                               <Text style = {{ color: teamColor, marginTop: -35, alignSelf: 'center', fontSize: 18, fontWeight: 'bold'}}> {teamName} </Text>
                         
                         </View>
-        } else if (this.state.isHost && isEditing){ // HOSTTEST  
+        } else if (this.state.isHost && canEdit && isEditing){ // HOSTTEST  
           cardTitle = <View style = {{flex: 1, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
                           <Input style={{ height: 15}}
                               value = {this.state.teamNameInput}
@@ -528,7 +597,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                               onChangeText={teamNameInput => this.setState({teamNameInput})} 
                             />
                             <View>
-                              {this.renderColorPicker()}
+                              {/*this.renderColorPicker()*/}
                             </View>
                            <Icon raised 
                              onPress={()=> this.editTeam(item)} 
@@ -595,7 +664,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
         return(
           <ThemeProvider {...this.props}  theme={LaserTheme}>
            <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Game Lobby" headerType = "lobby" />
-           <BluetoothManager {...this.props} screen= "Lobby"></BluetoothManager>
+           <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Lobby"></BluetoothManager>
             {/*this.renderJoinError()*/}
             <FlatList
               listKey = "main"

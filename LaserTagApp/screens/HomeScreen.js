@@ -14,6 +14,7 @@ export default class HomeScreen extends Component {
     title: 'Home', // Possibly have it dynamic to name
   };
  state = {
+  gunData: null,
   menuOptions: ["Manage Gun","Join Game", "Host Game"],
   menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Host Game', value: "Host"}],
   loginData: this.props.navigation.getParam("loginData", '')
@@ -22,6 +23,9 @@ componentDidMount() {
   console.log("HomeScreenMoubnt");
   
 }
+getGunData = (gunData) =>{
+  this.setState({gunData});
+} 
 componentWillUnmount() { // cancel all async tasks herere?
   console.log("Unmounting HomeScreen")
  // var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
@@ -37,7 +41,7 @@ componentWillUnmount() { // cancel all async tasks herere?
   let optVal =  optDic.value
   //console.log(optDic, optText, optVal)
   //alert("pressed "+optText)
-  this.props.navigation.navigate(optVal,{userData: this.state.loginData});
+  this.props.navigation.navigate(optVal,{userData: this.state.loginData, gunData: this.state.gunData});
 }
 
 renderWelcome(){
@@ -66,7 +70,7 @@ renderWelcome(){
       <ThemeProvider theme={LaserTheme}>
        <CustomHeader {...this.props} headerType = 'home' headerText= "Home" />
        {this.renderWelcome()}
-       <BluetoothManager {...this.props} screen= "Home" ></BluetoothManager>
+       <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Home" ></BluetoothManager>
 
         
         

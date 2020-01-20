@@ -25,7 +25,6 @@ export default class JoinGameScreen extends Component {
       scanning:false,
       key: '',
       appState: '',
-      connectedGun: null,
       keyError: '',
       discoveredP: false,
       loading: true,
@@ -34,16 +33,11 @@ export default class JoinGameScreen extends Component {
       joinGameError: false,
       gameListHeader: '',
       seachMode: 'public',
+      gunData: null,
     }
     //console.log("construct");
     //this.checkBLE(); Should get ran in GunStatusDisplay
     this.loadStorage()  // Checks storage and then builds upon startBLEManager
-    
-    this.joinGameHandleDiscoverPeripheral = this.joinGameHandleDiscoverPeripheral.bind(this);
-    this.joinGameHandleStopScan = this.joinGameHandleStopScan.bind(this);
-    this.joinGameHandleUpdateValueForCharacteristic = this.joinGameHandleUpdateValueForCharacteristic.bind(this);
-    this.joinGameHandleDisconnectedPeripheral = this.joinGameHandleDisconnectedPeripheral.bind(this);
-    this.joinGameHandleAppStateChange = this.joinGameHandleAppStateChange.bind(this);
   }
   loadStorage = () => {
     console.log("loading storage");
@@ -59,8 +53,9 @@ export default class JoinGameScreen extends Component {
     }
     })
     .then(ret => {
-      this.setState({connectedGun: ret.conGun,
-                  })
+      if (this.state.gunData == null){
+        this.setState({gunData: ret.conGun})
+      }
     })
     .catch(err => {
     // any exception including data not found
@@ -84,61 +79,19 @@ export default class JoinGameScreen extends Component {
     componentDidMount(){
         console.log("Join Game Mount")
         const userData = this.props.navigation.getParam("userData", null);
-        this.setState({userData})
+        const gunData = this.props.navigation.getParam("gunData", null);
+        console.log("Got userData",userData)
+        this.setState({userData, gunData})
         this.refresh();
         
     } 
 
     componentWillUnmount() { // cancel all async tasks herere? Appstate change?
       console.log("unmouting JoinScreen ");
-      var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-      var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-      var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-      var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-      console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
     }
 
     // Handlers
-    joinGameHandleDisconnectedPeripheral(gun) {
-      let connectedGun = this.state.connectedGun;
-      if (connectedGun.id == gun.peripheral) { 
-        connectedGun.connected = false;
-        this.setState({connectedGun})
-        this.saveGunConnection(this.state);
-      }
-      console.log('JoinGame Disconnected from ' + gun.peripheral);
-    }
   
-    joinGameHandleUpdateValueForCharacteristic(data) {
-      const command = bytesToString(data.value);
-      this.joinGameHandleGunCommand(command);
-      //console.log('Received data from ' + data.peripheral + ' characteristic ' + data.characteristic, data.value);
-    }
-  
-    joinGameHandleStopScan() {
-      console.log('Joingame Scan is stopped');
-      this.setState({ scanning: false });
-      if (this.state.searchID != null && this.state.foundMatch == false){
-        console.log("No matching gun found")
-        this.setState({connectionError: 'Gun Not Found'})
-      }
-    }
-  
-    joinGameHandleGunCommand (command) {
-      console.log("Join Game handling command",command)
-    }
-  
-    joinGameHandleDiscoverPeripheral(peripheral){
-      if (!this.state.discoveredP){
-        this.setState({discoveredP: true});
-      }
-      if (!peripheral.name || peripheral.name != "TULGN") {
-        return;
-      }
-      
-    }
-
-
     joinGameHandleAppStateChange(nextAppState) {
       if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
         console.log('JoinGame Screen has come to the foreground!')
@@ -148,7 +101,7 @@ export default class JoinGameScreen extends Component {
 
     joinPressed = (game) => {
       console.log("Tying to join",game);
-      if (!this.state.gunConnected){
+      if (this.state.gunConnected){
         console.log("Gun not connected")
         this.setState({joinGameError: "Connect to gun before joining game"});
         return;
@@ -222,8 +175,11 @@ export default class JoinGameScreen extends Component {
       }
     
       requestJoin(game){
+        gunMAC = this.state.gunData.advertising.serviceUUIDs[0].slice(-12);
+        console.log(gunMAC)
+        console.log(this.state.userData);
         this.setState({loadingGame: true})
-        var getURL = Web_Urls.Host_Url +"/game/"+game.id+"/"+this.state.userData.username+"/"+ this.state.userData.gun_address
+        var getURL = Web_Urls.Host_Url +"/game/"+game.id+"/"+this.state.userData.username+"/"+ gunMAC
         console.log("Sending request to ",getURL)
         var request = new XMLHttpRequest();
           request.onreadystatechange = (e) => {
@@ -247,7 +203,7 @@ export default class JoinGameScreen extends Component {
 
       handleGameListResponse(response) {
         const gameList = response
-        console.log("Handling",response)
+        //console.log("Handling",response)
         if (gameList.length < 1){
           this.setState({joinGameError: "No Games Found",
                         loading: false});     
@@ -259,6 +215,14 @@ export default class JoinGameScreen extends Component {
           }            
       }
     
+      handleJoinGame(response){
+        console.log("Joining Game",response);
+        const gameData = response
+        this.props.navigation.navigate('Lobby',{userData:this.state.userData,gameData:gameData,gunData:this.state.gunData})
+      }
+
+
+
       switchSearchMode = () => {
         const newMode =  ((this.state.searchMode == 'private') ? 'public' : 'private');
         if (newMode == 'public'){
@@ -299,7 +263,7 @@ export default class JoinGameScreen extends Component {
           return false;
         }
       }
-      
+
       keyExtractor = (item, index) =>index.toString()
       renderGameList = () => {
         const gameList = this.state.gameList;
@@ -396,7 +360,7 @@ export default class JoinGameScreen extends Component {
           gameIcon = 'users';
           teamInfo = item.num_teams + ' Teams'
         }
-        console.log("RENDERGAM",item.id)
+        //console.log("RENDERGAM",item.id)
         return (      
         <ListItem
           key = {"Game"+item.id}

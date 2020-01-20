@@ -32,7 +32,9 @@ export default class GunScreen extends Component {
     console.log("Gun Screden Mount");
     //this.setState({BluetoothM.state})
   }
-  
+  getGunData = (gunData) =>{
+    this.setState({gunData});
+  } 
   componentWillUnmount() { // cancel all async tasks herere?
     console.log("Unmounting gunscreen")
     //var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
@@ -54,7 +56,7 @@ export default class GunScreen extends Component {
       <ThemeProvider theme={LaserTheme}>
         <CustomHeader {...this.props} headerText = "Connect to Gun" headerType = "gun"/>
         <ThemeProvider theme={LaserTheme}>
-        <BluetoothManager {...this.props} screen= "Gun"></BluetoothManager>
+        <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Gun"></BluetoothManager>
         
         
         </ThemeProvider>

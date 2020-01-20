@@ -26,7 +26,7 @@ const RootStack = createStackNavigator(
     Lobby: GameLobbyScreen   
   },
   {
-    initialRouteName: "Lobby",
+    initialRouteName: "Login",
     headerMode: 'none',
     navigationOptions: {
           headerVisible: true,

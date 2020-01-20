@@ -57,7 +57,7 @@ export default class HostScreen extends Component {
       num_lives: 3,
       timeDisabled: 5,
       host: '',
-      
+      gunData: null,
       gameData: null,
      
     }
@@ -71,8 +71,9 @@ export default class HostScreen extends Component {
   componentDidMount(){
     //console.log("Host Screen Mount")
     const userData = this.props.navigation.getParam("userData", null);
+    const gunData = this.props.navigation.getParam("gunData", null);
     const host = userData.username;
-    this.setState({host, userData})
+    this.setState({host, userData,gunData})
     this.requestAllTeams();
     this.populateTemplateTeams();
     
@@ -80,11 +81,6 @@ export default class HostScreen extends Component {
 
   componentWillUnmount() { // cancel all async tasks herere?
     console.log("Unmounting host")
-    var updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-    var disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-    var discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-    var stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
-    console.log(updateListeners,disconnectListeners,discoverListeners,stopListeners);
   }
 
   createGame = () =>{
@@ -242,9 +238,11 @@ export default class HostScreen extends Component {
   handleCreateTeamsResponse = (teamResponse,gameData) => {
     console.log(" Got Team response",teamResponse);
     // Validate more?
-    this.props.navigation.navigate("Lobby",{userData: this.state.userData,
+    this.props.navigation.navigate("Lobby",{
+      userData: this.state.userData,
       gameData: gameData,
-      teamData: teamResponse
+      teamData: teamResponse,
+      gunData: this.state.gunData
       });
   }
   handleTeamListResponse = (teamResponse) =>{
