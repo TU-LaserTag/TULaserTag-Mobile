@@ -26,3 +26,7 @@ Expected UUID:
 
 useful link: REquest fgails:
 https://stackoverflow.com/questions/29901315/react-native-fetch-request-fails
+
+HTTP_PROXY=http://10.120.160.77:3128
+HTTPS_PROXY=http://10.120.160.77:3128
+https.proxy http://squidproxy:3128
