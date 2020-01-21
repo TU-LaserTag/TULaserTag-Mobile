@@ -13,9 +13,9 @@ const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
 
 
-export default class JoinGameScreen extends Component {
+export default class InGameScreen extends Component {
   static navigationOptions = {
-    title: 'Join Game', // Possibly have it dynamic to name
+    title: 'In Match', // Possibly have it dynamic to name
   };
 
   constructor(){
@@ -74,11 +74,9 @@ export default class JoinGameScreen extends Component {
     this.setState({gunData});
   } 
     
-    editGamekey = key => {
-      this.setState({ key });
-    };
+  
     componentDidMount(){
-        console.log("Join Game Mount")
+        console.log("InGame Mount")
         const userData = this.props.navigation.getParam("userData", null);
         const gunData = this.props.navigation.getParam("gunData", null);
         console.log("Got userData",userData)
@@ -403,33 +401,17 @@ export default class JoinGameScreen extends Component {
         return(
           <ThemeProvider {...this.props}  theme={LaserTheme}>
            <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Join Game" headerType = "join" />
-           <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Join"></BluetoothManager>
-            <Input
-              placeholder='Game Key (optional)'
-              keyboardType='default'
-              returnKeyType='done'
-              clearButtonMode='always'
-              leftIcon={{ type: 'entypo', name: 'key' }}
-              errorMessage= {this.state.keyError}
-              onChangeText={this.editGamekey}
-              underlineColorAndroid = '#FFF'
-              style={{marginBottom:4
-                      }}
-              value={this.state.key}
-            />
+           <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Ingame"></BluetoothManager>
+            
             <Button style= {{size: 4,
                             marginHorizontal: 10,
                             marginVertical: 5
                             
             }}
-              title= "Search Private Games"
-              disabled = {this.getKeyStatus()}
-              onPress={() => this.requestPrivateGames()}
+              title= "Fire"
+              onPress={() => this.fireGun()}
               />
-            
-            {this.rendergameListHeader()}
-            {this.renderJoinError()}
-            {this.renderGameList()}
+          
             </ThemeProvider>
           );
         }

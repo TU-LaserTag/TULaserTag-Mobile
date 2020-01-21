@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet, Alert} from 'react-native'
 import { ThemeProvider , Header, Icon, Button} from 'react-native-elements';
 import { LaserTheme } from './Custom_theme';
 import { Title } from 'native-base';
@@ -28,6 +28,21 @@ export default class CustomHeader extends Component {
   }
   refresh = () =>{
     this.props.refresh();
+  }
+  exitLobby = () =>{
+    Alert.alert(
+      'Exit Lobby',
+      'Are you sure you want to exit this lobby?',
+      [
+        {
+          text: 'No',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel',
+        },
+        {text: 'Yes', onPress: () => this.goHome()},
+      ],
+      {cancelable: false},
+    );
   }
 
   getHeader = () => { 
@@ -69,7 +84,7 @@ export default class CustomHeader extends Component {
       <Header>
       <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
       <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
-      <Icon name='refresh' type='ion' color='white' onPress={() => this.refresh()} />
+      <Icon name='refresh' type='ionIcon' color='white' onPress={() => this.refresh()} />
     </Header>
     )
   } else if (type == "host") {
@@ -83,9 +98,9 @@ export default class CustomHeader extends Component {
   } else if (type == "lobby") {
     return (
       <Header>
-      <Icon name='chevron-left' type='fontAwesome' color='white' onPress={() => this.goBack()} />
+      <Icon name='md-exit' type='ionicon' color='white' onPress={() => this.exitLobby()} />
       <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
-      <Icon name='refresh' type='ion' color='white' onPress={() => this.refresh()} />
+      <Icon name='refresh' type='ionIcon' color='white' onPress={() => this.refresh()} />
     </Header>
     )
   }

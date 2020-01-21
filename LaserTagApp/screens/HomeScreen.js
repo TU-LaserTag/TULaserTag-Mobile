@@ -17,7 +17,7 @@ export default class HomeScreen extends Component {
   gunData: null,
   menuOptions: ["Manage Gun","Join Game", "Host Game"],
   menuTranslater: [{text:"Connect To Blaster",value: "Gun"}, {text:'Join Game', value: "Join"},{text:'Host Game', value: "Host"}],
-  loginData: this.props.navigation.getParam("loginData", '')
+  userData: this.props.navigation.getParam("userData", null)
 }
 componentDidMount() {
   console.log("HomeScreenMoubnt");
@@ -41,11 +41,11 @@ componentWillUnmount() { // cancel all async tasks herere?
   let optVal =  optDic.value
   //console.log(optDic, optText, optVal)
   //alert("pressed "+optText)
-  this.props.navigation.navigate(optVal,{userData: this.state.loginData, gunData: this.state.gunData});
+  this.props.navigation.navigate(optVal,{userData: this.state.userData, gunData: this.state.gunData});
 }
 
 renderWelcome(){
-  const username = this.state.loginData.username
+  const username = this.state.userData.username
   return (
     <Text 
       style={{

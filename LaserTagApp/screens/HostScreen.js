@@ -10,6 +10,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import NumericInput from 'react-native-numeric-input'
 import BluetoothManager from '../components/Ble_manager'
 import ModalDropdown from 'react-native-modal-dropdown';
+import { toHsv } from 'react-native-color-picker';
 
 const dimensions = Dimensions.get('window');
 const Container_Width = Math.round(dimensions.width *1/3);
@@ -24,6 +25,7 @@ export default class HostScreen extends Component {
   constructor(){
     super()
     this.state = {
+      hostLoading: false,
       userData: null,
       scanning:false,
       key: '',
@@ -40,8 +42,8 @@ export default class HostScreen extends Component {
 
       gameModeIndex: 0,
       gameModeText: 'solo',
-      selectionIndex:0,
-      selectionText: 'automatic',
+      selectionIndex:1,
+      selectionText: 'manual',
       gameName: '',
       gameNameError: '',
       gameCode: '',
@@ -59,6 +61,7 @@ export default class HostScreen extends Component {
       host: '',
       gunData: null,
       gameData: null,
+      teamData: null,
      
     }
     //console.log("construct");
@@ -84,7 +87,24 @@ export default class HostScreen extends Component {
   }
 
   createGame = () =>{
+    this.setState({hostLoading: true});
     // Set 0s to -1 for infinite here
+    let ammo = this.state.ammo;
+    let lives = this.state.num_lives;
+    let gamemode = this.state.gameModeText; // I should not have to validate this but here we are...
+    let selectionText = this.state.selectionText;
+    let numTeams = this.state.numTeams;
+    if (gamemode == 'solo'){
+      selectionText = 'manual';
+      numTeams = 0;
+    }
+
+    if (this.state.ammo == 0){
+      maxammo = -1
+    }
+    if (this.state.num_lives == 0){
+      lives = -1
+    }
     // Do empty String validation errors here
     const date = this.state.gameDate;
     var dd = date.getDate();
@@ -99,34 +119,22 @@ export default class HostScreen extends Component {
     today = mm+'-'+dd+'-'+yyyy;
      
     const GamePayload = {
-      maxammo: this.state.ammo,
+      maxammo: ammo,
       style: this.state.gameModeText,
       timedisabled: this.state.timeDisabled,
-      maxLives: this.state.num_lives,
+      maxLives: lives,
       pause: false,
       date: today,
       code: this.state.gameCode,
-      num_teams: this.state.num_teams,
-      team_selection: this.state.selectionText,
+      num_teams: numTeams,
+      team_selection: selectionText,
       name: this.state.gameName,
       host: this.state.host,
     }
 
-    const TestGamePayload = {
-      maxammo: 100,
-      style: "team",
-      timedisabled: 3,
-      maxLives: 2,
-      pause: false,
-      date: "01-18-2020",
-      code: "",
-      num_teams: 2,
-      team_selection: "automatic",
-      name: "Mister Game and watch",
-      host: "Canthony",
-    }
-        //this.sendCreateGameRequest(GamePayload);
-        this.handleCreateGameResponse("noope");
+    
+    this.sendCreateGameRequest(GamePayload);
+    //this.handleCreateGameResponse("noope");
   }
   requestAllTeams() { // Request all Teams
     this.setState({loading: true,
@@ -149,8 +157,8 @@ export default class HostScreen extends Component {
           this.setState({teamLoadError: "Could not load teams,",
                        loading: false}); 
           // FOR USE OFFLINE    
-          responseList =[{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null},{"id":18,"name":"Copycats","color":"#109876","league_id":null},{"id":20,"name":"","color":"#09ff11","league_id":null},{"id":21,"name":"","color":"#0bf5ee","league_id":null},{"id":22,"name":"","color":"#497c21","league_id":null},{"id":23,"name":"","color":"#f1f40b","league_id":null},{"id":24,"name":"","color":"#f10b0b","league_id":null},{"id":19,"name":"Hogan's Heroes","color":"#fa7c18","league_id":null}]
-          this.handleTeamListResponse(responseList);
+          //responseList =[{"id":8,"name":"Horace Greely","color":"#12543F","league_id":null},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null},{"id":18,"name":"Copycats","color":"#109876","league_id":null},{"id":20,"name":"","color":"#09ff11","league_id":null},{"id":21,"name":"","color":"#0bf5ee","league_id":null},{"id":22,"name":"","color":"#497c21","league_id":null},{"id":23,"name":"","color":"#f1f40b","league_id":null},{"id":24,"name":"","color":"#f10b0b","league_id":null},{"id":19,"name":"Hogan's Heroes","color":"#fa7c18","league_id":null}]
+          //this.handleTeamListResponse(responseList);
         }
       }
       request.open('GET', getURL);
@@ -166,7 +174,6 @@ export default class HostScreen extends Component {
         }
         if (request.status === 200) {
           gameResponse = JSON.parse(request.response);
-          console.log("GOT RESPONSE",gameResponse)
           this.handleCreateGameResponse(gameResponse);
         } else {
           console.log("Got Error",request);
@@ -201,49 +208,71 @@ export default class HostScreen extends Component {
           //              loading: false});     
         }
       }
-      console.log("Creating teams at",getURL); 
+      
       request.open('POST',getURL);
       request.setRequestHeader("Content-type","application/json");
       console.log("Sending",payload)
       request.send(JSON.stringify(payload)); // Strigify?
   }
 
+  // Once game is created, Join it as host
+  requestJoinGame(game){
+    gunMAC = this.state.gunData.advertising.serviceUUIDs[0].slice(-12);
+    console.log(gunMAC)
+    console.log(this.state.userData);
+    const username = this.state.userData.username;
+    this.setState({loadingGame: true})
+    var getURL = Web_Urls.Host_Url +"/game/"+game.id+"/"+username+"/"+ gunMAC
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          response = JSON.parse(request.response);
+          console.log("Joining Game?",response)
+          this.props.navigation.navigate("Lobby",{
+            userData: this.state.userData,
+            gameData: response, // or this.state.gameData
+            teamData: this.state.teamData,
+            gunData: this.state.gunData
+            });
+        } else {
+          console.log("Error",request)
+          this.setState({joinGameError: "Could not Join Game",
+                        loading: false});     
+        }
+      }
+      request.open('GET', getURL);
+      request.send();
+    }
+
   handleCreateGameResponse = (gameResponse) =>{
     console.log("Got Game Cfreations REsponse",gameResponse);
-    DummyGameResponse = {
-      "code": "",
-      "date": "01-18-2020",
-      "endtime": null,
-      "host": "Canthony",
-      "id": 12,
-      "locked": false,
-      "maxLives": 2,
-      "maxammo": 100,
-      "name": "Mister Game and watch",
-      "num_teams": 2,
-      "pause": false,
-      "players_alive": null,
-      "starttime": null,
-      "style": "team",
-      "team_selection": "automatic",
-      "teams_alive": null,
-      "timedisabled": 3,
-      "winners": null,
-    };
-    
-    this.requestCreateTeams(DummyGameResponse); // Just passes it through to prevent state Setting -- REplace with gameResponse
-
-    
+    if (gameResponse.style == 'solo'){
+      console.log("Straight up Join in");
+      this.requestJoinGame(gameResponse);
+    }else{ // Add more clauses depending on game mode
+      this.requestCreateTeams(gameResponse); // Just passes it through to prevent state Setting -- REplace with gameResponse
+    }
   }
-  handleCreateTeamsResponse = (teamResponse,gameData) => {
-    console.log(" Got Team response",teamResponse);
+
+  handleCreateTeamsResponse = (teamData,gameData) => {
+    //console.log(" Got Team response",teamResponse);
     // Validate more?
-    this.props.navigation.navigate("Lobby",{
-      userData: this.state.userData,
-      gameData: gameData,
-      teamData: teamResponse,
-      gunData: this.state.gunData
-      });
+    this.setState({teamData});
+    if (this.state.gunData == null){
+      console.log("No gun data, connect to gun");
+
+    }else if (this.state.userData == null){
+      console.log("No UserData Please login");
+      // Attempt force refresh>??
+    } else if(gameData == null) {
+      console.warn("ALRIGHT WHAT THE HECK ARE YA Doin");
+    } else{
+      this.requestJoinGame(gameData);
+    }
   }
   handleTeamListResponse = (teamResponse) =>{
     //console.log("Handling Respons",teamResponse);
@@ -803,7 +832,7 @@ export default class HostScreen extends Component {
           {this.renderLivesNumberPicker()}
           {this.renderCooldownNumberPicker()}
           {this.renderAmmoSelection()}
-          <Button style={{marginBottom: 15}}title= "Begin Hosting" onPress={() => this.createGame()}/>
+          <Button loading = {this.state.hostLoading} style={{marginBottom: 15}}title= "Begin Hosting" onPress={() => this.createGame()}/>
           </View>
          
         </ThemeProvider>

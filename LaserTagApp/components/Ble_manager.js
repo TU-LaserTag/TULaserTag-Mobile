@@ -12,6 +12,7 @@ import {
   PermissionsAndroid,
   AppState,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import {ListItem,Divider} from 'react-native-elements'
 import {Button, ThemeProvider, Input, Icon} from 'react-native-elements'
@@ -38,6 +39,8 @@ export default class BluetoothManager extends Component {
       connectionError: '',
       searchID: null,
       foundMatch: false,
+      connectLoad:false,
+      searchLoad: false,
     }
     //console.log("construct");
     
@@ -129,13 +132,6 @@ export default class BluetoothManager extends Component {
         conGun: data.connectedGun,
       }
     })
-    const gunAddress = data.connectedGun;
-    /*global.storage.save({
-      key: 'userData',
-      data: {
-        gun_address: data.connectedGun.,
-      }
-    })*/
   }
 
   saveEmitterState(data) {
@@ -296,15 +292,8 @@ export default class BluetoothManager extends Component {
   }
 
   handleDisconnectedPeripheral(gun) {
-    
-    console.log("Disconnected df",gun);
-    //let peripherals = this.state.peripherals;
-    //let peripheral = peripherals.get(data.peripheral);
     let connectedGun = this.state.connectedGun;
     if (connectedGun.id == gun.peripheral) {
-      //console.log("Got Dis match");
-      //peripherals.set(peripheral.id, peripheral);
-      //this.setState({peripherals});
       connectedGun.connected = false;
       this.setState({connectedGun})
       this.saveGunConnection(this.state);
@@ -334,6 +323,7 @@ export default class BluetoothManager extends Component {
       //console.log("Everything all clear")
     }
     if (this.state.searchID != null && this.state.foundMatch == false){
+      this.setState({searchLoad: false});
       console.log("No matching gun found")
       this.setState({connectionError: 'Gun Not Found'})
     }
@@ -355,8 +345,6 @@ export default class BluetoothManager extends Component {
     }
     if (this.state.searchID != null){ // Searching For specific gun
       let pService = peripheral.advertising.serviceUUIDs[0];
-      //console.log("Pfal",peripheral);
-      //let pService = peripheralInfo.services[0];
       let serviceTag = pService.slice(-6);
       //console.log(serviceTag);
       if (serviceTag == this.state.searchID){
@@ -377,6 +365,7 @@ export default class BluetoothManager extends Component {
   searchForGun = () => {
     console.log(this.state.searchID)
     console.log("Searching FOr gun");
+    this.setState({searchLoad: true});
     this.startScan();
     
   }
@@ -385,18 +374,9 @@ export default class BluetoothManager extends Component {
       if (results.length == 0) {
         console.log('No connected peripherals')
       }
-      var peripherals = this.state.peripherals;
-      for (var i = 0; i < results.length; i++) {
-        var peripheral = results[i];
-        peripheral.connected = true;
-        peripherals.set(peripheral.id, peripheral);
-        this.setState({ peripherals });
-      }
     });
   }
 
-  /*
-  */
 
   checkGunConnection(){
     //console.log("Checking for connected Gun",this.props.screen);
@@ -413,7 +393,6 @@ export default class BluetoothManager extends Component {
           console.log('Gun IS connected!');
           this.state.connectedGun.connected = true;
           if (this.props.getGunData != undefined){ //-======############ NEED THIS TO TRANSFER gun data
-            console.log("Calling get gundata");
             this.props.getGunData(connectedGun);
           }
           this.setState({connectedGun})
@@ -471,7 +450,9 @@ readData(){
   }
 
 toggleGunConnection(peripheral) {
+
   console.log("Toggling gun connection")
+  this.setState({connectLoad: true});
     if (peripheral){
       if (peripheral.connected){
         //console.log("Disconnecting",peripheral)
@@ -482,7 +463,7 @@ toggleGunConnection(peripheral) {
           BleManager.disconnect(peripheral.id).then(() => {
             //console.log("disconnevting from ",peripheral.id);
             peripheral.connected = false;
-            this.setState({connectedGun: peripheral})
+            this.setState({connectedGun: peripheral, connectLoad: false})
           }).catch((error) => {
             console.warn("Disconnecting error",error);
           })
@@ -490,6 +471,17 @@ toggleGunConnection(peripheral) {
           console.log("Stop notification error",error);
         });
       }else{
+        setTimeout(() =>{ 
+          console.log("Connection timed out");
+          this.setState({connectLoad: false});
+          if (this.state.connectedGun.connected == false){
+            //console.log("No connected Gun",this.state.connectedGun);
+            this.setState({connectionError: 'Could not connect with Gun'})
+          } else{
+            //console.log("happy tiems");
+            this.setState({connectionError: ''});
+          }
+        },5000);
         BleManager.connect(peripheral.id).then(() => {
           peripheral.connected = true;
           this.setState({connectedGun: peripheral})
@@ -509,20 +501,24 @@ toggleGunConnection(peripheral) {
               //bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic',({ value, peripheral, characteristic, service }) => {
               //  console.log("haha",value);  
               //});
+              this.setState({connectLoad: false});
             }).catch((error) => {
               console.warn("Notification error",error);
+              this.setState({connectLoad: false});
               this.setState({connectionError: 'Problems communicating with gun'})
             });
           }).catch((error) => {
+            this.setState({connectLoad: false});
             console.warn("Retrieve service error",error);
             this.setState({connectionError: 'Problems communicating with gun'})
 
           });
         }).catch((error) => {
+          this.setState({connectLoad: false});
         console.log('Connection error', error);
         this.setState({connectionError: 'Could not connect to gun'})
-
       });
+      
     }
   }
 }
@@ -553,13 +549,25 @@ toggleGunConnection(peripheral) {
     
 
 
-
+    renderSpinner = () => {
+      if (this.state.connectLoad){
+        //console.log("Rendering Spin")
+        return(
+          <View>
+          <ActivityIndicator size="small" color="gray" style />
+          </View>
+        )
+      } else{
+        return (<View/>)
+      }
+    }
 
   renderConnectedGun() {
     var myGun = this.state.connectedGun;   
     if (myGun != null){
       const color = myGun.connected ? '#99ff99' : '#fff'; //Remind me to turn these to LinearGradient + scale feedback
       const iconName = myGun.connected ? 'link' : 'disconnect';
+      
       let pService = myGun.advertising.serviceUUIDs[0]
       let serviceTag = pService.slice(-6);
       const gunName = myGun.name + ': ' + serviceTag;
@@ -576,6 +584,7 @@ toggleGunConnection(peripheral) {
                 title={gunName}
                 subtitle = {myGun.connected ? 'Connected' : 'Not Connected'}
                 rightIcon = {{type: 'antdesign', name: iconName}}
+                rightElement = {this.renderSpinner()}
         />
         
       );
@@ -674,7 +683,7 @@ toggleGunConnection(peripheral) {
           autoCorrect = {false}
         />
         <Text style= {{fontSize: 24, textAlign: 'center'}}> OR </Text>
-        <Button title= "Scan QR"  onPress={() => this.readData() }>
+        <Button title= "Scan QR"  onPress={() => this.readData()} load={this.state.searchLoad}>
         </Button>
         <Divider style={{ backgroundColor: 'blue' }} />
           {(this.state.connectedGun == null) &&

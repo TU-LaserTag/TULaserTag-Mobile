@@ -6,6 +6,7 @@ import EntypoI from 'react-native-vector-icons/Entypo'
 import { Button, ThemeProvider, Input, Header } from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import { Container, Content, Spinner, Body,Left, Right } from 'native-base';
+import {Web_Urls} from '../constants/webUrls';
 
 import CustomHeader from '../components/CustomHeader';
 import HomeScreen from './HomeScreen';
@@ -79,83 +80,71 @@ export default class LoginScreen extends Component {
       if (this.state.username == '') {// Also run through alphanumeric validator
         console.log("Empty usname");
         this.setState({usernameError: "Must Input Username"});
-       // error =true;
+        error =true;
       }
       if (this.state.pass == '') {// Also run through alphanumeric validator
         console.log("Empty Password");
         this.setState({passError: "Must Input Password"});
-        //error = true
+        error = true
       } 
       if (error == true){
         return // Breaks out of sending data
       } else{
-        //this.sendRequest()
-        const loginData = {
-          username: this.state.username,
-          userid: 0,
-          role: "user",
-          pass: this.state.pass
-        }
-        this.loggedIn(loginData);
-        this.props.navigation.navigate("Home",{loginData: loginData});
+        this.requestLogin();
       }
     };
 
-    loggedIn = (data) => {
-      console.log("Logging in and storing data",data)
+    loggedIn = (userData) => {
+      console.log("Logging in and storing data",userData)
+      
       global.storage.save({
         key: 'userData',
         data: {
-          username: data.username,
-          userid: data.userid,
-          password: data.pass,
-          role: data.role,
-          gun_address: null
+          username: userData.username,
+          userid: userData.id,
+          password: this.state.pass,
+          role: userData.role,
         }
       })
+      this.props.navigation.navigate("Home",{userData: userData});
     }
   
-      sendRequest(sValue) {
-        this.setState({loading: true})
-        const username = this.state.username;
-        const password = this.state.pass;
-        const key =this.state.key;
-        var getURL = "Https://tuschedulealerts.com/player/"+username+'/'+password
-        fetch(getURL,{ 
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
+    requestLogin() { // Request all games
+      this.setState({loading: true})
+      var getURL = Web_Urls.Host_Url + "/player/"+this.state.username+"/"+this.state.pass;
+      console.log("Sending request to ",getURL)
+      var request = new XMLHttpRequest();
+        request.onreadystatechange = (e) => {
+          if (request.readyState !== 4) {
+            return;
           }
-        })
-        .then(this.handleResponse)
-        .then(this.parseResponse)
-        .catch((error) => {console.log("OOF:"); console.error(error);});
-      }
+          if (request.status === 200) {
+            response = JSON.parse(request.response);
+            //console.log
+            this.handleLoginResponse(response);
+          } else {
+            // Needs more error handling
+            console.log("Error",request)
+            this.setState({usernameError: "Error while Connecting To Server",
+                         loading: false}); 
+            return false;
+          }
+        }
+        request.open('GET', getURL);
+        request.send();
+    }
     
-      handleResponse = response => {
+      handleLoginResponse = response => {
         this.setState({loading: false})
         if (response.ok){
-          //console.log(response)
-          // If data - no data or no type
-          //display error on screen
-          if (response == "none"){
-            console.log("error in data")
-            this.setState({loading: false})
-            return "error"
-            
-          } else if ( response == "error") { //
-            console.log("More errors")
-            this.setState({loading: false})
-            return "Big sad" //
-          }else{
-              return response.text()
-          } // Happy path
-  
+          this.setState({usernameError: '', passError: ''});
+          const userData = response.person
+          //console.log("userData",userData)
+          this.loggedIn(userData);
         } else{
-          //console.log(response)
-          this.setState({loading: false})
-          throw new Error ('Data retrieval Fail',response.error)
+          console.log("Incorrect Something",response.message);
+          // Separate out?
+          this.setState({passError: "Incorrect Username or Password"}); 
         }
       }
     
@@ -222,6 +211,7 @@ export default class LoginScreen extends Component {
               }}
               title= 'Login'
               onPress={() => this.loginPressed()}
+              loading = {this.state.loading}
               />
              </Container>
           </ThemeProvider>

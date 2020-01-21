@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList, ViewBase} from 'react-native';
+import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList, Dimensions} from 'react-native';
 import { Text,Button, Icon, ThemeProvider, Input, Divider, ListItem,Card,Overlay} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader';
@@ -10,7 +10,7 @@ import {Web_Urls} from '../constants/webUrls';
 import { Item,Toast, Picker } from 'native-base';
 import { ScrollView, TouchableHighlight } from 'react-native-gesture-handler';
 import ModalDropdown from 'react-native-modal-dropdown';
-import { ColorPicker,toHsv, fromHsv } from 'react-native-color-picker'
+import { ColorPicker, TriangleColorPicker, fromHsv } from 'react-native-color-picker'
 import BluetoothManager from '../components/Ble_manager';
 import { NavigationEvents } from 'react-navigation';
  
@@ -36,13 +36,15 @@ export default class GameLobbyScreen extends Component {
     this.state = {
       nextAppState:null,
       scanning:false,
+      gameError: '',
       key: '',
       appState: '',
       connectedGun: null,
       keyError: '',
       discoveredP: false,
       loading: true,     
-      seachMode: 'public',
+      needColor: false,
+      editMyColor:false,
       gameData: {},
       teamData: [],
       userData: {},
@@ -55,14 +57,16 @@ export default class GameLobbyScreen extends Component {
       temColorInput: null,
       createTeam: false,
       availibleTeams: [],
+      setColor: 'gray',
+      curColor: 'green',
       hue: 0,
       sat: 0,
       val: 1,
     }
     console.log("construct");
     //this.loadStorage()  // CCan load storage but really not nexessary for now
-    this.onSatValPickerChange = this.onSatValPickerChange.bind(this);
-    this.onHuePickerChange = this.onHuePickerChange.bind(this);
+   
+    this.onColorChange = this.onColorChange.bind(this);
   }
   
   loadStorage = () => {
@@ -79,7 +83,7 @@ export default class GameLobbyScreen extends Component {
   })
   .then(userData => {
   this.setState({userData})
-  if (this.state.userData.username == this.state.gameData.host){
+  if (this.state.userData.username == this.state.gameData.game.host){
     this.setState({isHost: true});
   }
   })
@@ -112,35 +116,93 @@ export default class GameLobbyScreen extends Component {
     const gameData = this.props.navigation.getParam("gameData", null);
     const teamData = this.props.navigation.getParam("teamData",null);
     const gunData = this.props.navigation.getParam("gunData",null);
-    //this.setState({userData,gameData,teamData});
+    
+    this.setState({userData,gameData,teamData});
     //const 
-    const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
-    const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
-    const dummyPlayerData = [{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"},{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]
+    //const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
+    //const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
+    //const dummyPlayerData = [{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"},{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}]
     
     if (userData == null){
       console.log("No user Data");
       this.loadStorage();
     } else{
-      if (userData.username == gameData.host){
+      if (userData.username == gameData.game.host){
         this.setState({isHost: true});
       }
     }
-      
-    this.setState({gameData: dummyGameData,teamData: dummyTeamData,playerList: dummyPlayerData}); // FIX THIS LATEWR
+    if (gameData == null){
+      console.log("Error No Game Data");
+      // Fetch game data? 
+    }else{
+      //console.log("Laoded game data",gameData)
+      if (gameData.game.style == "solo"){
+        const playerList = gameData.game.individuals
+        this.setState({playerList});
+        //console.log("SET A LIST",playerList)
+        if (gameData.needColor || gameData.game.individuals.length ===0){
+          console.log("Need a color");
+          this.setState({needColor: true})
+        } else{
+          console.log("Find playerlist",playerList)
+          var isInlist = playerList.find(player => {
+            return player.player_username === userData.username;
+          })
+          if (isInlist != undefined){
+            console.log("Youre in!",isInlist);
+            const player = isInlist;
+            this.setState({needColor: false, editMyColor: false,curColor:player.color,setColor: player.color});
+          } else{
+            this.setState({needColor: true});
+          }
+        }
+      } else{
+        console.log("Team data load?")
+        if (teamData == null && gameData.game.style == "team"){
+          console.log("No teamData");
+          this.requestTeamData(gameData.game.id)
+        } else{
+          console.log("either solo or have teamData",teamData)
+        }
+      }
+      //this.refreshAllData(gameData.game.id,userData.username);
+    }
+
     
+      
+    //this.setState({gameData: dummyGameData,teamData: dummyTeamData,playerList: dummyPlayerData}); // FIX THIS LATEWR
+    this.refreshLoop = setInterval(()=> { // Dont forget to destroy (clearintercal)
+      //onsole.log("Callin gcheckup");
+      if (this.state.needColor || this.state.editMyColor){
+
+      } else{
+        this.refreshAllData();
+      }
+    
+    }, 10000);
     //console.log("Loading data",gameData,userData,teamData);
     //this.requestGameData(gameData.id); // Maybe move to constructor?
     if (gunData == null){
       console.log("GunData null")
     } else{
-      console.log("Joining Game"); // Only if host?? -- Move to handle event of host screen?
-      this.requestJoinGame(userData,gameData,gunData);
+      console.log("Error Reading gunData");
+      // Get Gun data or force checkGunConnection
     }
   } 
 
+
+  refreshAllData(){
+    const gameID = this.state.gameData.game.id;
+    const username = this.state.userData.username;
+    this.requestGameData(gameID,username)
+    //this.requestTeamData(gameID)
+    //this.requestPlayerData(gameID)
+  }
+
+
   componentWillUnmount() { // cancel all async tasks herere? Appstate change?
       console.log("Unmounting lobbyy screen");
+      clearInterval(this.refreshLoop); // Possibly add to blur as well
   }
   
   gameLobbyHandleAppStateChange(nextAppState) {
@@ -150,13 +212,35 @@ export default class GameLobbyScreen extends Component {
     this.setState({appState: nextAppState});
   }
 
-  requestGameData(game_id) { // Rewquest specific game data
+
+  requestTeamData(game_id){
+    console.log("Requesting teams")
     this.setState({loading: true,
-                    gameList: [],
-                    searchMode: 'public',
-                    gameListHeader: "Public Games:"
     })
-    var getURL = Web_Urls.Host_Url + "/game/"+game_id
+    var getURL = Web_Urls.Host_Url + "/teams/"+game_id
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+    request.onreadystatechange = (e) => {
+      if (request.readyState !== 4) {
+        return;
+      }
+      if (request.status === 200) {
+        teamList = JSON.parse(request.response);
+        this.setState({teamData: teamList, loading: false})
+      } else {
+        console.log("Trouble fetching team data") // Needs more error handling
+        this.setState({loading: false});     
+      }
+    }
+    request.open('GET', getURL);
+    request.send();
+  }
+
+
+  requestGameData(game_id,username) { // Rewquest specific game data
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/checkup/"+username+"/"+game_id // For somereason not returning evertyih
     console.log("Sending request to ",getURL)
     var request = new XMLHttpRequest();
       request.onreadystatechange = (e) => {
@@ -164,17 +248,104 @@ export default class GameLobbyScreen extends Component {
           return;
         }
         if (request.status === 200) {
-          responseList = JSON.parse(request.response);
-          this.handleGameListResponse(responseList);
+          gameData = JSON.parse(request.response);
+          //console.log("Got GAME======== Data",gameData); // Gets strange on team games
+          if (gameData.game.style == 'solo'){
+            const individuals = gameData.game.individuals;
+            var isInlist = individuals.find(player => {
+              return player.player_username === this.state.userData.username;
+            })
+            if (isInlist!= undefined){
+              //console.log("Youre in!",isInlist);
+              const player = isInlist;
+              this.setState({needColor: false,editMyColor: false,curColor:player.color,setColor:player.color});
+            } else{
+              //console.log("Youre not in");
+              this.setState({needColor: true});
+            }  
+            this.setState({loading: false, gameData: gameData, playerList: individuals});
+          } else{
+            console.log("Set up teams here")
+          }
+          this.setState({loading: false, gameData: gameData});
+          
+          
         } else {
-          // Needs more error handling
-          this.setState({joinGameError: "Could not connect to server, Please try again later",
+          console.log("Erroe when Sdearching for game data",request)
+          this.setState({gameError: "Could not connect to server, Please try again later",
                         loading: false});     
         }
       }
       request.open('GET', getURL);
       request.send();
   }
+
+  requestPlayerData(game_id) { // Rewquest specific game data
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/players/"+game_id
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          playerList = JSON.parse(request.response);
+          console.log("playerData",playerList);
+          this.setState({loading: false, playerList: playerList})
+        } else {
+          console.log("Erroe when Sdearching for player liust",request)
+          this.setState({gameError: "Could not connect to server, Please try again later",
+                        loading: false});     
+        }
+      }
+      request.open('GET', getURL);
+      request.send();
+  }
+
+  requestAssignColor(color){
+    const gameID = this.state.gameData.game.id
+    const username = this.state.userData.username;    
+    //console.log("Assigning color",gameID,username,color,this.state.curColor)
+    if (this.state.curColor == color){
+      //console.log("ASame color: returnrting")
+      this.setState({editMyColor: false});
+      return;
+    }
+    this.setState({loading:true,curColor: color});
+    var getURL = Web_Urls.Host_Url + "/color/"+username+"/"+gameID;
+    const payload = {
+      color: color
+    }
+    console.log("Sending request to ",getURL,payload);
+    var request = new XMLHttpRequest();
+    request.onreadystatechange = (e) => {
+      if (request.readyState !== 4) {
+        return;
+      }
+      if (request.status === 200) {
+        assignmentResponse = JSON.parse(request.response);
+        //console.log("OCLORREDP",assignmentResponse);
+        if (assignmentResponse.ok){
+          //console.log("Setting Player color",assignmentResponse);
+          this.refreshAllData(); // Not sure if this should be called just yet
+        } else{
+          console.log("Something went wrong",assignmentResponse);
+          alert(assignmentResponse.message);
+        }
+        // update TeamData to contain that state
+        this.setState({loading: false});
+      } else {
+        console.log("Color setting error",request)
+        this.setState({loading: false});     
+      }
+    }
+    request.open('POST', getURL);
+    request.setRequestHeader("Content-type","application/json");
+    request.send(JSON.stringify(payload));
+  }
+
   requestAssignPlayer(team,player){ // Can be array of players
     this.setState({loading: true }); // Different loading types??
     const payload = [{team_id: team.id, player_username: player.username}];
@@ -187,15 +358,16 @@ export default class GameLobbyScreen extends Component {
       }
       if (request.status === 200) {
         assignmentResponse = JSON.parse(request.response);
-        console.log("Success assigning player to team",assignmentResponse)
+        //console.log("Success assigning player to team",assignmentResponse)
         // update TeamData to contain that state
         this.setState({loading: false})
       } else {
-      console.log("assignment Errorr",request)
-      this.setState({loading: false});     
+        console.log("assignment Errorr",request)
+        this.setState({loading: false});     
       }
     }
     request.open('POST', getURL);
+    request.setRequestHeader("Content-type","application/json");
     request.send(JSON.stringify(payload));
  }
   
@@ -224,13 +396,8 @@ export default class GameLobbyScreen extends Component {
   request.send(JSON.stringify(payload));
  }
 
-  requestJoinGame(userData,gameData,gunData){
-    console.log("Joining",gameData,userData,gunData);
-  }
-
-
   editTeam = (team) =>{
-    console.log("Editing team",team);
+    //console.log("Editing team",team);
     if (this.state.editTeam != null){
       //console.log("Toggling edit",team.name,this.state.editTeam.name);
       if (this.state.editTeam.name == team.name){
@@ -238,7 +405,7 @@ export default class GameLobbyScreen extends Component {
         this.requestPatchTeam(team,this.state.teamNameInput);
         this.setState({editTeam:null});
       } else{
-        console.log("Editing a different team");
+        //console.log("Editing a different team");
         this.setState({editTeam:team});
       }
     } else{
@@ -248,21 +415,15 @@ export default class GameLobbyScreen extends Component {
     
   }
 
-onSatValPickerChange({ saturation, value }) { /* Semi Depreciated/ will keep here for FFA matched */
-  this.setState({
-    sat: saturation,
-    val: value,
-  });
-}
 
-  onHuePickerChange({ hue }) {
-    this.setState({
-      hue,
-    });
+  onColorChange(setColor) {
+    //console.log("Setting color",fromHsv(setColor));
+    // Send Message to Gun to change RGB
+    this.setState({ setColor })
   }
 
   refresh = (mode) => {
-    this.requestGameData(); // And mor
+   this.refreshAllData();// And mor
   }
 
   isEmptyObject = (obj) => {
@@ -272,10 +433,10 @@ onSatValPickerChange({ saturation, value }) { /* Semi Depreciated/ will keep her
   keyExtractor = (item, index) => { // Remove??
   }
       
-  renderJoinError = () => { // Remove??
-    if (this.state.joinGameError != ''){
+  renderGameError = () => { // Remove??
+    if (this.state.gameError != ''){
       return (
-      <Text style = {{backgroundColor: 'red', textAlign: 'center', color: 'white'}}>{this.state.joinGameError}</Text>
+      <Text style = {{backgroundColor: 'red', textAlign: 'center', color: 'white'}}>{this.state.gameError}</Text>
       )
     }else{
       return 
@@ -283,25 +444,31 @@ onSatValPickerChange({ saturation, value }) { /* Semi Depreciated/ will keep her
   }
 
   renderColorPicker = () =>{
-    const { hue, sat, val } = this.state;
+    let editColor = false;
+    if (this.state.needColor || this.state.editMyColor){ // Todo, change from not to todo
+      console.log("Showing up Color Picker",this.state.needColor,this.state.editMyColor);
+      editColor = true
+    }else{
+      editColor = false
+    }
+    
     return (
-      <Overlay isVisible>
-        <Text>Hello from Overlay!</Text>
-
-      <View style={{flex: 1, padding: 45, backgroundColor: '#212021'}}>
-      <Text style={{color: 'white'}}>React Native Color Picker - Controlled</Text>
-      <ColorPicker
-        oldColor='purple'
-        color={this.state.color}
-        onColorChange={this.onColorChange}
-        onColorSelected={color => alert(`Color selected: ${color}`)}
-        onOldColorSelected={color => alert(`Old color selected: ${color}`)}
-        style={{flex: 1}}
-      />
-    </View>
+      <Overlay isVisible = {editColor}>
+      <View style={{flex: 5, padding: 45, backgroundColor: '#212021'}}>
+              <Text style={{color: 'white'}}>Pick Your Color!</Text>
+              <TriangleColorPicker
+                oldColor={this.state.curColor}
+                color={this.state.setColor}
+                onColorChange={this.onColorChange}
+                onColorSelected={color => this.requestAssignColor(color)}
+                onOldColorSelected={color => this.requestAssignColor(color)}
+                style={{flex: 1}}
+              />
+            </View>
     </Overlay>
     )
-  }
+  } 
+  
   
   getTeamFromUsername = (username) =>{
     teamList = this.state.teamData;
@@ -361,15 +528,21 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
 }
 
   renderTeamPicker = (playerTeam,player) => {
-    const gameData = this.state.gameData;
-    let teamItems = this.state.teamData.map( (team, index) =>{
-      return team.name
-    });
+    const gameData = this.state.gameData.game;
+    let teamItems = [];
+    if (playerTeam == ''){
+      //console.log("Solo game?");
+    }else{
+        teamItems = this.state.teamData.map( (team, index) =>{
+        return team.name
+      });
+    }
     // Use populated availible teams instyed??
-    //console.log("player",player)
+    //console.log("Picker for player",player,this.state.userData.username);
     if (this.state.isHost){
       if (playerTeam == "none"){ // Then check if needs team and if teamPicking is manual
         if (gameData.team_selection == 'manual') {
+          // Also check if needsName or something is true
           //console.log("Displaying team picker");
           /*return(
             <View>
@@ -387,6 +560,13 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
             options={teamItems}/> 
           )
         }
+      } else if (playerTeam == ''){
+        if (player.player_username == this.state.userData.username){
+          //console.log("Can edit self team");
+          return (
+            <Button title = "Color" titleStyle= {{ fontSize:9}} onPress = {()=> this.setState({editMyColor: true})}></Button>
+          )
+        }
       }
     } else{
 
@@ -397,35 +577,37 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
   }
       renderPlayer= ({ item }) => {
         //console.log(this.state.playerList,this.state.teamData);
-        gameStyle = this.state.gameData.style;
-        let teamData = this.getTeamFromUsername(item.username)
-        let gameIcon = ''
+        gameStyle = this.state.gameData.game.style;
+        //console.log("STYLE",gameStyle);        
+        let gameIcon = '';
+        let teamData = ''
         //console.log("TEaminfo",teamData);
         if (gameStyle == 'solo'){ // Dont render Team, render color
           gameIcon = 'user';
-          teamData = 'item.color?'
+          teamInfo = item
         } else if(gameStyle == 'team'){ // Render Team info, allow host to alter teams
           gameIcon = 'users';
+          teamData = this.getTeamFromUsername(item.player_username)
           teamInfo = item.num_teams + ' Teams'
         }
-        let teamColor = teamInfo.color;
+        let teamColor = teamInfo.color; // adjust for solo?
         return (      
         <ListItem
-          style = {{color: teamColor}}
+          style= {{borderColor: teamColor, borderWidth: 1}}
           key = {item.id}
-          title={item.username}
-          titleStyle = {{fontSize: 11}}
+          title={item.player_username}
+          titleStyle = {{fontSize: 14,color: 'black'}}
           containerStyle = {{
             backgroundColor: "#EEEEEE"
           }}
-          subtitle={teamData.name}
+         // subtitle={(teamData == '') ? '' : teamData.name} // Chage?
           subtitleStyle = {{
             fontSize: 9,
-            color: teamData.color,
+            color: teamColor
             
           }}
           rightSubtitle = {this.renderTeamPicker(teamData,item)}
-          leftIcon={{ name: 'user', type: 'feather', color: teamData.color} /*Could be Avatar as well? or team/League indicator */}
+          leftIcon={{ name: gameIcon, type: 'feather', color: teamColor} /*Could be Avatar as well? or team/League indicator */}
           bottomDivider
         />
       )}
@@ -445,6 +627,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       }
       renderPlayers = (playerList,type) => {
         //const playerList = this.state.playerList;
+        //console.log("reneer players",playerList,type)
         if (playerList == undefined || playerList == null){
           return (
             <ActivityIndicator size="large" color="#61578b"
@@ -475,7 +658,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       
       
       renderGameDataCard = () =>{ /* More to come!!! */
-        var gameData = this.state.gameData;
+        var gameData = this.state.gameData.game;
         if (gameData == null || gameData == undefined){
           return( 
           <View>
@@ -596,9 +779,6 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                               returnKeyType='done'                     
                               onChangeText={teamNameInput => this.setState({teamNameInput})} 
                             />
-                            <View>
-                              {/*this.renderColorPicker()*/}
-                            </View>
                            <Icon raised 
                              onPress={()=> this.editTeam(item)} 
                              name = {iconName} 
@@ -621,10 +801,13 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       }
 
       renderTeamCards = () =>{ /* More to come!!! */
-        const gameData = this.state.gameData;
+        const gameData = this.state.gameData.game;
         const teamData = this.state.teamData;
         const userData = this.state.userData;
         var teamList = [];
+        if (gameData.style == 'solo'){ // Add solo details here?
+          return <View></View>
+        }
         if (gameData == null || this.isEmptyObject(gameData)){
           return( 
           <View>
@@ -638,14 +821,28 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           )
         } else {
           const numTeams = gameData.num_teams;
-          if (teamData.length == 0){
-            console.log("NO Teams")
-            for (i = 1; i <=numTeams; i ++){
-              teamList.push({id:i, name:"Team "+i, key:"t"+i});
+          if (teamData == null){
+            //console.log("No teams loaded yet");
+            return( 
+              <View>
+                  <ActivityIndicator size="large" color="#61578b"
+                    style = {{
+                        paddingTop: 30,
+                        justifyContent: 'center', 
+                        alignContent: 'center'
+                    }} />
+              </View>
+            )
+          }else{
+            if (teamData.length == 0){
+              console.log("NO Teams")
+              for (i = 1; i <=numTeams; i ++){
+                teamList.push({id:i, name:"Team "+i, key:"t"+i});
+              }
+            } else {
+            teamList = teamData
             }
-        } else {
-          teamList = teamData
-        }
+          }
           return(
             <FlatList
               listKey = "team"
@@ -666,6 +863,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
            <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Game Lobby" headerType = "lobby" />
            <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Lobby"></BluetoothManager>
             {/*this.renderJoinError()*/}
+
+             {this.renderColorPicker()}       
             <FlatList
               listKey = "main"
               keyExtractor={this.DataKeyExtractor}

@@ -6,6 +6,7 @@ import EntypoI from 'react-native-vector-icons/Entypo'
 import { Button, ThemeProvider, Input, Header } from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import { Container, Content, Spinner, Body,Left, Right } from 'native-base';
+import {Web_Urls} from '../constants/webUrls';
 
 import CustomHeader from '../components/CustomHeader';
 import HomeScreen from './HomeScreen';
@@ -32,7 +33,7 @@ export default class SignupScreen extends Component {
     editPassword = pass => {
       this.setState({ pass });
     };
-    editConfirmPass = key => {
+    editConfirmPass = confirmPass => {
       this.setState({ confirmPass });
     };
     componentDidMount(){
@@ -47,96 +48,82 @@ export default class SignupScreen extends Component {
       if (this.state.username == '') {// Also run through alphanumeric validator
         console.log("Empty usname");
         this.setState({usernameError: "Must Input Username"});
-       // error =true;
+        error =true;
       }
       if (this.state.pass == '') {// Also run through alphanumeric validator
         console.log("Empty Password");
         this.setState({passError: "Must Input Password"});
-        //error = true
+        error = true
       } 
-      if (this.state.conFirmPassError == '') {// Also run through alphanumeric validator
+      if (this.state.conFirmPass == '') {// Also run through alphanumeric validator
         console.log("Empty Password");
         this.setState({conFirmPassError: "Must Confirm Password"});
-        //error = true
+        error = true
       } else if (this.state.confirmPass != this.state.pass){
         console.log("Unmatching password")
         this.setState({conFirmPassError: "Passwords Do not match"});
-
+        error = true
       }
 
      
       if (error == true){
         return // Breaks out of sending data
       } else{
-        this.sendRequest()
-        this.props.navigation.navigate("Home");
+        this.requestCreatePlayer()
+        
       }
     };
-  
-      sendRequest(sValue) {
-        this.setState({loading: true})
-        const username = this.state.username;
-        const password = this.state.pass;
-        var getURL = "Https://tuschedulealerts.com/player/"
-        fetch(getURL,{ 
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: username,
-            password: password 
-          })
-        })
-        .then(this.handleResponse)
-        .then(this.parseResponse)
-        .catch((error) => {console.log("OOF:"); console.error(error);});
+    requestCreatePlayer(gameData){ 
+      this.setState({loading: true})
+      const username = this.state.username;
+      const password = this.state.pass;
+      const payload = {
+        player_username: username,
+        password: password
       }
+      var getURL = Web_Urls.Host_Url + "/create/player";
+      var request = new XMLHttpRequest();
+        request.onreadystatechange = (e) => {
+          if (request.readyState !== 4) {
+            return;
+          }
+          if (request.status === 200) {
+            playerResponse = JSON.parse(request.response);
+            //console.log("Creating player",playerResponse)
+            this.handleCreatePlayerResponse(playerResponse);
+          } else {
+            console.log("Got Error",request);
+            // Needs more error handling
+            this.setState({usernameError: "An error has occured Please try again later"});
+          }
+        }
+        request.open('POST',getURL);
+        request.setRequestHeader("Content-type","application/json");
+        request.send(JSON.stringify(payload)); // Strigify?
+    }
     
-      handleResponse = response => {
+    handleCreatePlayerResponse = response => {
         this.setState({loading: false})
         if (response.ok){
-          //console.log(response)
-          // If data - no data or no type
-          //display error on screen
-          if (response == "none"){
-            console.log("error in data")
-            this.setState({loading: false})
-            return "error"
-            
-          } else if ( response == "error") { // Or no echem search data
-            console.log("More errors")
-            this.setState({loading: false})
-            return "Big sad" // From here submit request for echem search
-          }else{
-              return response.text()
-          } // Happy path
-  
+          this.setState({usernameError: '', passError: '', conFirmPassError: ''});
+          userData = response.body;
+          console.log("UserData",userData)
+          // Save user data 
+          global.storage.save({
+          key: 'userData',
+            data: {
+              username: userData.username,
+              password: this.state.confirmPass,
+            }
+          })
+          // Navigate to HomeScreen
+          this.props.navigation.navigate("Login",{userData:userData});
         } else{
-          //console.log(response)
-          this.setState({loading: false})
-          throw new Error ('Data retrieval Fail',response.error)
+          console.log("OOF",response);
+          this.setState({usernameError: response.message})
         }
       }
     
-      parseResponse = data => {
-        //console.log("parsing data",data)
-        if (data == "error"){
-          console.log("nooo")
-          this.setState({chemData: "Something Went wrong"})
-        }
-         else if (data == "noData"){
-          console.log("no data found")
-        }
-        else if (data == "notType"){
-          console.log("Input type not recognized")
-        }
-        else{
-          this.setState({errorStat: [false,"loading"]})
-          var data = JSON.parse(data)            
-        }
-      }
       renderSpinner = () => {
         if (this.state.loading == true){
           return(
@@ -190,6 +177,7 @@ export default class SignupScreen extends Component {
               }}
               title= 'Sign Up'
               onPress={() => this.signupPressed()}
+              loading = {this.state.loading}
               />
              </Container>
           </ThemeProvider>
