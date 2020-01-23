@@ -13,7 +13,11 @@ import ModalDropdown from 'react-native-modal-dropdown';
 import { ColorPicker, TriangleColorPicker, fromHsv } from 'react-native-color-picker'
 import BluetoothManager from '../components/Ble_manager';
 import { NavigationEvents } from 'react-navigation';
- 
+import NumericInput from 'react-native-numeric-input'
+
+const dimensions = Dimensions.get('window');
+const Container_Width = Math.round(dimensions.width *1/3);
+const Container_Height = Math.round(dimensions.height * 1/20);
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 //import Title from '../components/Ghs_Comps/Title'
@@ -45,6 +49,9 @@ export default class GameLobbyScreen extends Component {
       removePlayerLoading: false,
       loading: true,     
       needColor: false,
+      needName: false,
+      myGunID: null,
+      myTeam: null,
       editMyColor:false,
       editGame: false,
       gameData: {},
@@ -65,6 +72,10 @@ export default class GameLobbyScreen extends Component {
       sat: 0,
       val: 1,
       gameLength: null,
+      gameNameInput: null,
+      num_lives: null,
+
+
     }
     console.log("construct");
     //this.loadStorage()  // CCan load storage but really not nexessary for now
@@ -80,8 +91,12 @@ export default class GameLobbyScreen extends Component {
     const teamData = gameData.game.teams; // Teams are pre populated from previous assignments.....
     const gunData = this.props.navigation.getParam("gunData",null);
     const gameLength = this.props.navigation.getParam("game_length",null)
-    console.log("Got game Length",gameLength);
-    this.setState({userData,gameData,teamData,gameLength});
+    console.log("Got game Length",gameLength); // If null, make them set it
+    this.setState({userData,gameData,teamData,gameLength});;
+    const myGunID = gameData.gun_id;
+    const needName = gameData.needName;
+    const myTeam = gameData.myTeam;
+    this.setState({myGunID,needName,myTeam});
     //const 
     //const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
     //const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
@@ -138,7 +153,7 @@ export default class GameLobbyScreen extends Component {
       //this.refreshAllData(gameData.game.id,userData.username);
     }
 
-    
+   
       
     //this.setState({gameData: dummyGameData,teamData: dummyTeamData,playerList: dummyPlayerData}); // FIX THIS LATEWR
     this.refreshLoop = setInterval(()=> { // Dont forget to destroy (clearintercal)
@@ -150,14 +165,13 @@ export default class GameLobbyScreen extends Component {
         //console.log(this.state.teamData,this.state.playerList)
       }
     
-    }, 10000);
+    }, 15000);
     //console.log("Loading data",gameData,userData,teamData);
     //this.requestGameData(gameData.id); // Maybe move to constructor?
     if (gunData == null){
       console.log("GunData null")
     } else{
-      console.log("Error Reading gunData");
-      // Get Gun data or force checkGunConnection
+      console.log("Gun ID",gunData.id);
     }
   } 
   componentWillUnmount() { // cancel all async tasks herere? Appstate change?
@@ -206,6 +220,19 @@ export default class GameLobbyScreen extends Component {
   getGunData = (gunData) =>{
     //console.log("Recieved GunData",gunData);
     this.setState({gunData});
+    /** if gun is conected,,, verification/validation */
+    if (gunData.connected){
+      if (this.state.myGunID != null){
+        /* Wait a bit and then send the gun ID to tgun */
+        setTimeout(() =>{this.bleManager.sendMessage("G:"+this.state.myGunID)},500)
+        
+      } else{
+        console.warn("Did not recieve Gun ID");
+      }
+    } else{
+      console.warn("Gun not connected");
+    }
+    
   } 
 
 
@@ -258,6 +285,17 @@ export default class GameLobbyScreen extends Component {
       return true;
     }
 
+  }
+
+  checkOnTeam(username){ // checks if a player has a team or not
+    const gameData = this.state.gameData;
+    const teams = gameData.game.teams;
+    const numAssigned = this.countTeamsAssigned(username,teams);
+    if (numAssigned >= 1){
+      return true;
+    } else{
+      return false;
+    }
   }
 
   checkTeamConflict(username){
@@ -313,13 +351,15 @@ export default class GameLobbyScreen extends Component {
   }
 
   editGame = (gameData) =>{
-    console.log("Editing game");
+    const gameNameInput = this.state.gameData.game.name;
+    console.log("Editing game",gameNameInput);
+
     if (this.state.editGame == true){
      this.setState({editGame: false});
      // Send off changes
      this.refreshAllData();  
     } else{
-      this.setState({editGame: true})  
+      this.setState({editGame: true,gameNameInput});  
     }
     
   }
@@ -421,10 +461,7 @@ export default class GameLobbyScreen extends Component {
           gameData = JSON.parse(request.response);
           //console.log("Got GAME======== Data",gameData); // Gets strange on team games
           if (gameData.ok){
-            if (gameData.game.locked){
-              console.log("LOCKED INTO GAME",gameData);
-              return;
-            }
+            
             if (gameData.game.style == 'solo'){
               const individuals = gameData.game.individuals;
               var isInlist = individuals.find(player => {
@@ -437,6 +474,7 @@ export default class GameLobbyScreen extends Component {
               } else{
                 //console.log("Youre not in");
                 this.setState({needColor: true});
+                
               }  
               this.setState({loading: false, gameData: gameData, playerList: individuals});
             } else{
@@ -450,8 +488,13 @@ export default class GameLobbyScreen extends Component {
               this.setState({loading: false, teamData,gameData,playerList})
             }
             this.setState({loading: false, gameData: gameData});
+            if (gameData.game.locked){
+              console.log("LOCKED INTO GAME",gameData);
+              /** Start Timer */
+              return;
+            }
           } else{
-            console.log("Waiting for assigned team",gameData);
+            console.log("Waiting for assigned team");
             
             this.requestGameInfo();
           }
@@ -465,6 +508,7 @@ export default class GameLobbyScreen extends Component {
       request.open('GET', getURL);
       request.send();
   }
+
 
   requestGameInfo(){
     const game_id = this.state.gameData.game.id;
@@ -480,9 +524,10 @@ export default class GameLobbyScreen extends Component {
         if (request.status === 200) {
           gameInfo = JSON.parse(request.response);
           //console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
+          //console.log("---------------");
           let  gameData = this.state.gameData;
-               gameData.game = gameInfo[0];
-
+               gameData = gameInfo;
+          
             if (gameData.game.style == 'solo'){
               const individuals = gameData.game.individuals;
               var isInlist = individuals.find(player => {
@@ -779,7 +824,7 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
           for (var j = 0; j < playerList.length; j ++){
             let mplayer = playerList[j];
             pusername = mplayer.username;
-            //console.log(mplayer)
+            console.log(mplayer,playerList)
             if (pusername == undefined){
               console.log("pusername is undefined? - getTeam from Usernam")
              // pusername = mplayer.username
@@ -918,6 +963,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
     //console.log("TEamPicker",isRenderingTeamPlayer);
     let teamItems = [];
     let isSolo = false;
+    let isOnTeam = false;
+   
     if (player.style == 'solo' || playerTeam == 'solo' || gameData.style == 'solo'){ 
       console.log("Solo game");
       isSolo = true;
@@ -937,16 +984,33 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
     if (username == undefined){
       username = player.username;
     }
-   // console.log("Got username",username)
-    if (playerTeam == "none" && !isSolo){ // If no assinged team and not a solo game
+    isOnTeam = this.checkOnTeam(username);
+   //console.log("Got username",isOnTeam)
+    if ((playerTeam == "none" && !isSolo) || !isOnTeam ){ // If no assinged team and not a solo game
       if (gameData.team_selection == 'manual') {
         if (this.state.isHost){ // If host (Or captain/neadsName?), then allow Player team assignment from dropdown if player team is none   // If not automatic game      
           return ( // Dont forget to style this
-            <View>
+            <View style={{flexDirection:'row'}}>
             <ModalDropdown 
-            defaultValue = "Assign Team"
+            defaultValue = "Assign"
             onSelect = { selectedTeamIndex => this.assignTeam(selectedTeamIndex,player)}
-            options={teamItems}/> 
+            options={teamItems}
+            style={{
+              backgroundColor: '#209cee',
+              alignSelf: 'flex-end',
+              justifyContent: 'center',
+              padding: 2,
+              borderWidth: 1,
+              borderRadius: 5,
+              height: 30,
+              borderColor: "#EEEEEE"
+            }}
+            textStyle=
+            {{
+              color: 'white',
+              fontSize: 10,
+            }}
+            /> 
             <Button  title = "Kick" loading = {this.state.removePlayerLoading} titleStyle= {{ color: 'red', fontSize:9}} onPress = {()=> this.removePlayer(username,gameData.id)}></Button>
             </View>
           )
@@ -1035,12 +1099,13 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           
           const teamList = this.state.teamData
           const assignedTeam = item.team_name;
+          const isOnTeam = this.checkOnTeam(username);
           //console.log(this.state.gameData)
-          if (assignedTeam == "" || assignedTeam == null){
+          if (assignedTeam == "" || assignedTeam == null || !isOnTeam){
             //console.log(" No team assinged to player");
             if (isRenderingTeamPlayer){
               teamInfo = this.getTeamFromUsername(username,teamList); // Grabs team data from username 
-              //console.log("Got tem from username",teamInfo)
+              console.log("Got tem from username",teamInfo)
             }else{
               teamInfo='none';
             }
@@ -1123,8 +1188,153 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
             )
           }
         }
+
+
+        renderLivesNumberPicker = () => {
+          //const liveText = ((this.state.gameModeIndex == 0 ) ? "Number of lives":"Number of lives" );
+          const liveText = "Lives :";
+          return(
+            <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
+                 <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                  <Text style={{ alignSelf: 'center', margin: 3, fontSize:15}}>{liveText} </Text>
+                </View>
+                  <NumericInput 
+                    value={this.state.num_lives} 
+                    onChange={num_lives => this.setState({num_lives})} 
+                    onLimitReached={(isMax,msg) => console.log(isMax,msg)}
+                    totalWidth={Container_Width} 
+                    totalHeight={Container_Height} 
+                    iconSize={20}
+                    step={1}
+                    minValue={0}
+                    valueType='integer'
+                    rounded 
+                    textColor='#4a4a4a' 
+                    iconStyle={{ color: 'white' }} 
+                    rightButtonBackgroundColor='#ae93Bf' 
+                    leftButtonBackgroundColor='#ae939f'/>
+                  <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                    <Text style={{color: 'gray', marginLeft: 4, fontSize: 11}}>Lives per game{"\n"}(0 for infinite)</Text>
+                  </View>
+            </View>
+          )
+        }
+        renderCooldownNumberPicker = () => {
+          const liveText = "Cooldown:";
+          return(
+            <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
+                 <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                  <Text style={{ alignSelf: 'center', margin: 3, fontSize:22}}>{liveText} </Text>
+                </View>
+                  <NumericInput 
+                    value={this.state.timeDisabled} 
+                    onChange={timeDisabled => this.setState({timeDisabled})} 
+                    onLimitReached={(isMax,msg) => console.log(isMax,msg)}
+                    totalWidth={Container_Width} 
+                    totalHeight={Container_Height} 
+                    iconSize={20}
+                    step={1}
+                    minValue={0}
+                    valueType='integer'
+                    rounded 
+                    textColor='#4a4a4a' 
+                    iconStyle={{ color: 'white' }} 
+                    rightButtonBackgroundColor='#ae93Bf' 
+                    leftButtonBackgroundColor='#ae939f'/>
+                  <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                    <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Seconds disabled after hit</Text>
+                    </View>
+            </View>
+          )
+        }
+      
+        renderAmmoSelection = (gameData) => {
+          return (
+                <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
+                <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                 <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:22}} >Ammo:</Text>
+               </View>
+                 <NumericInput 
+                   value={this.state.ammo} 
+                   onChange={ammo => this.setState({ammo})} 
+                   onLimitReached={(isMax,msg) => console.log(isMax,msg)}
+                   totalWidth={Container_Width} 
+                   totalHeight={Container_Height} 
+                   iconSize={20}
+                   step={5}
+                   minValue={0}
+                   valueType='integer'
+                   rounded 
+                   textColor='#4a4a4a' 
+                   iconStyle={{ color: 'white' }} 
+                   rightButtonBackgroundColor='#ae93Bf' 
+                   leftButtonBackgroundColor='#ae939f'/>
+                 <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+          <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Shots per game{"\n"}(0 for infinite)</Text>
+                   </View>
+           </View>
+            )
+        }
+        getTimeLimit = (currentTime) =>{ // TODO: ASK ABOUT TIME ZONE!!!
+          var minLim = 0;
+          curDate = new Date(currentTime);
+          var curHour = curDate.getHours();
+          var curMin = curDate.getMinutes();
+          var minutesUntil = ((23 - curHour) * 60) + (59 - curMin);
+          milisUntil = minutesUntil * 60 *1000;
+          minLim = currentTime + milisUntil
+          var predictedEnd = new Date(minLim)
+          return minutesUntil;
+        }
+      
+        renderGameLengthPicker = () => {
+          const gameTime = this.state.gameDate.getTime();
+          var gameLength = this.state.game_length * 60 * 1000;
+          const potentialEnd = new Date(gameTime + gameLength);
+          var newLengthLimit = '';
+          if (this.state.lengthLimit == null){
+            newLengthLimit = this.getTimeLimit(gameTime)
+          }
+          return (
+                <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
+                <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+                 <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>Timer:</Text>
+               </View>
+                 <NumericInput 
+                   value={this.state.game_length} 
+                   onChange={game_length => this.setState({game_length})} 
+                   onLimitReached={(isMax,msg) => console.log(isMax,msg)}
+                   totalWidth={Container_Width} 
+                   totalHeight={Container_Height} 
+                   iconSize={20}
+                   step={1}
+                   minValue={1}
+                   maxValue={newLengthLimit}
+                   valueType='integer'
+                   rounded 
+                   textColor='#4a4a4a' 
+                   iconStyle={{ color: 'white' }} 
+                   rightButtonBackgroundColor='#ae93Bf' 
+                   leftButtonBackgroundColor='#ae939f'/>
+                 <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
+          <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Minutes{"\n"}Limited to 11:59 PM</Text>
+                   </View>
+           </View>
+            )
+        }
       
       
+      renderGameEditor = (gameData) =>{
+        /* Edit gamedata*/
+        return(
+          <View>
+          <Card title={"Edit Game"} titleStyle= {{ fontSize: 20}}>
+              {this.renderAmmoSelection(gameData)}
+          </Card>
+        </View>
+      )
+    }
+
       renderGameDataCard = () =>{ /* More to come!!! */
         var gameData = this.state.gameData.game;
         if (gameData == null || gameData == undefined){
@@ -1176,7 +1386,14 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                         </View>
          } else{
           iconName = "check";
-          cardTitle = <View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+          const cardTitle = (<View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+                            <Input style={{ height: 15}}
+                              value = {this.state.gameNameInput}
+                              autoCompleteType = 'off'
+                              placeholder='Game Name'
+                              returnKeyType='done'                     
+                              onChangeText={gameNameInput => this.setState({gameNameInput})} 
+                            />
                             <Icon raised 
                               onPress={()=> this.editGame(gameData)} 
                               name = {iconName} 
@@ -1184,9 +1401,18 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                               containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
                               color= "black"  
                               type = 'material-community'/> 
-                              <Text style = {{ color: 'black', marginTop: -35, alignSelf: 'center', fontSize: 20, fontWeight: 'bold'}}> {gameData.name} </Text>
-                        
-                        </View> 
+                        </View>);
+          return (
+            <View>
+            <Card title={cardTitle} titleStyle= {{ fontSize: 20}}>
+                {this.renderLivesNumberPicker()}
+                {this.renderAmmoSelection()}
+                {this.renderCooldownNumberPicker()}
+                {this.renderGameLengthPicker()}
+             </Card>
+          </View>
+
+          )
          }
           return(
             <View>
@@ -1277,7 +1503,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                           <Input style={{ height: 15}}
                               value = {this.state.teamNameInput}
                               autoCompleteType = 'off'
-                              placeholder='teamName'
+                              placeholder='Team Name'
                               returnKeyType='done'                     
                               onChangeText={teamNameInput => this.setState({teamNameInput})} 
                             />
@@ -1367,9 +1593,9 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
         return(
           <ThemeProvider {...this.props}  theme={LaserTheme}>
            <CustomHeader {...this.props} refresh = {this.refresh} leaveLobby = {this.leaveLobby} headerText= "Game Lobby" headerType = "lobby" />
-           <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Lobby"></BluetoothManager>
+           <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Lobby"></BluetoothManager>
             {/*this.renderJoinError()*/}
-
+          {/*<Button onPress = { () =>this.bleManager.sendMessage("Hello world")}></Button>*/}
              {this.renderColorPicker()}       
             <FlatList
               listKey = "main"

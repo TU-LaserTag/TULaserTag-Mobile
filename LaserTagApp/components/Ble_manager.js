@@ -26,9 +26,7 @@ const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 export default class BluetoothManager extends Component {
   constructor(){
     super()
-    //c//onst previousState = this.props.bleState TODO: figure out how to pass data along seemlessly
-
-
+    
     this.state = {
       scanning:false,
       peripherals: new Map(),
@@ -45,7 +43,6 @@ export default class BluetoothManager extends Component {
     //console.log("construct");
     
      // Checks storage and then builds upon startBLEManager
-    
     this.handleDiscoverPeripheral = this.handleDiscoverPeripheral.bind(this);
     this.handleStopScan = this.handleStopScan.bind(this);
     this.handleUpdateValueForCharacteristic = this.handleUpdateValueForCharacteristic.bind(this);
@@ -53,24 +50,24 @@ export default class BluetoothManager extends Component {
     this.handleAppStateChange = this.handleAppStateChange.bind(this);
     this.componentDidFocus = this.componentDidFocus.bind(this);
     this.componentWillBlur = this.componentWillBlur.bind(this);
-     
+    this.sendMessage = this.sendMessage.bind(this);
   }
   checkBLE = () => { // Does a quick scan and checks if any devices were discovered
-    console.log("checking ble",this.state.discoveredP,this.state.emitterStarted);
+    //console.log("checking ble",this.state.discoveredP,this.state.emitterStarted);
       //var serviceArray = ["206AC814-ED0B-4204-BD82-246F28A83FCE"] // GEt Clip ID and populate here
       this.setState({ scanning: true });
-      BleManager.scan([], 0.5, false).then(() =>{
-        console.log('Scanning...');
-        console.log(this.state.scanning);
+      BleManager.scan([], 0.4, false).then(() =>{
+        //console.log('Scanning...');
+        //console.log(this.state.scanning);
         setTimeout(() => {
           if (this.state.scanning){
-          console.log("Forcing Stop",this.state.discoveredP,this.state.emitterStarted,this.props.screen)
+          //console.log("Forcing Stop",this.state.discoveredP,this.state.emitterStarted,this.props.screen)
           BleManager.stopScan().then(() => {
-            console.log("Scan Force Stopped",this.state.discoveredP,this.props.screen);
+            //console.log("Scan Force Stopped",this.state.discoveredP,this.props.screen);
             this.setState({ scanning: false });
           });
         }
-        }, 900);
+        }, 800);
       }).catch((error) =>{
       console.log("Catch ble check error",error);
       this.setState({ scanning: false });
@@ -82,7 +79,7 @@ export default class BluetoothManager extends Component {
   }
   
   loadStorage = () => {
-    console.log("loading storage");
+    //console.log("loading storage");
     global.storage.load ({
     key: 'gunData',
     autoSync: true,
@@ -117,9 +114,9 @@ export default class BluetoothManager extends Component {
   startScan() {
     if (!this.state.scanning) {
       //var serviceArray = ["206AC814-ED0B-4204-BD82-246F28A83FCE"] // GEt Clip ID and populate here
-      console.log("Starting scan for ",this.state.searchID);
+      //console.log("Starting scan for ",this.state.searchID);
       return BleManager.scan([], 1, false).then(() => {
-        console.log('Scanning...');
+        //console.log('Scanning...');
         this.setState({scanning:true});
       });
     }
@@ -154,9 +151,9 @@ export default class BluetoothManager extends Component {
   
 
   addListeners() {
-    this.props.navigation.addListener('didFocus', this.componentDidFocus),
-    this.props.navigation.addListener('willBlur', this.componentWillBlur),
-    
+    // CHeck listeners length??
+    this.props.navigation.addListener('didFocus', this.componentDidFocus);
+    this.props.navigation.addListener('willBlur', this.componentWillBlur);
     AppState.addEventListener('change', this.handleAppStateChange);
 
     const updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
@@ -164,7 +161,7 @@ export default class BluetoothManager extends Component {
     const discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
     const stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
 
-    console.log("AddinG Listeners",this.props.screen,updateListeners,stopListeners)
+    console.log("AddinG Listeners",this.props.screen);
     if (discoverListeners.length < 1) {
         console.log("added discover listener");
         this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
@@ -195,25 +192,22 @@ export default class BluetoothManager extends Component {
 
     if (discoverListeners.length > 0){
       bleManagerEmitter.removeListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral,false);
-      //this.handlerDiscover.remove();
     }
     if (stopListeners.length >0){
       bleManagerEmitter.removeListener('BleManagerStopScan', this.handleStopScan,false);
-
     }
     if (disconnectListeners.length > 0){
       bleManagerEmitter.removeListener('BleManagerDisconnectPeripheral', this.handleDisconnectedPeripheral,false);
-
     }
     if (updateListeners.length > 0){
       bleManagerEmitter.removeListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic,false);
     }
-    AppState.removeEventListener('change',this.handleAppStateChange)
+    AppState.removeEventListener('change',this.handleAppStateChange,false);
   
-    updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
-    disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
-    discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
-    stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
+    //updateListeners = bleManagerEmitter.listeners('BleManagerDidUpdateValueForCharacteristic');
+    //disconnectListeners = bleManagerEmitter.listeners('BleManagerDisconnectPeripheral');
+    //discoverListeners = bleManagerEmitter.listeners('BleManagerDiscoverPeripheral');
+    //stopListeners = bleManagerEmitter.listeners('BleManagerStopScan');
     //console.log("after",updateListeners,disconnectListeners,discoverListeners,stopListeners);
   }
   
@@ -225,27 +219,27 @@ export default class BluetoothManager extends Component {
       console.log("Started Bluetooth Manager");
       this.setState({emitterStarted: true});
       //this.saveEmitterState(this.state);
-      
     }).catch((error) => {
-      console.log("blemanager start error",error);
+      console.warn("blemanager start error",error);
     });     
   }
 
   componentDidFocus(){
-    console.log("Component Focused",this.props.screen); // NEED to make sure it is the only focused screen
+    //console.log("Component Focused",this.props.screen); // NEED to make sure it is the only focused screen
     this.addListeners();
     this.loadStorage();
   }
 
   componentWillBlur(){
-    console.log("Component Blured",this.props.screen);
+    //console.log("Component Blured",this.props.screen);
     this.removeListeners();
   }
 
   componentDidMount = () => { // TODO: FIGURE OUT WHY listeners only call get called from home/ listeners being added/removed?
-    this.props.navigation.addListener('didFocus', this.componentDidFocus),
+    this.addListeners();
+    /*this.props.navigation.addListener('didFocus', this.componentDidFocus),
     this.props.navigation.addListener('willBlur', this.componentWillBlur),
-    // Remove these??
+    // Remove these?? // Check if listener list is empty
     AppState.addEventListener('change', this.handleAppStateChange);
     console.log("added discover listener");
     this.handlerDiscover = bleManagerEmitter.addListener('BleManagerDiscoverPeripheral', this.handleDiscoverPeripheral);
@@ -258,7 +252,7 @@ export default class BluetoothManager extends Component {
   
     console.log("added updateListener");
     this.handlerUpdate = bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic', this.handleUpdateValueForCharacteristic );
-  
+  */
 
     if (Platform.OS === 'android' && Platform.Version >= 23) {
         PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION).then((result) => {
@@ -270,6 +264,7 @@ export default class BluetoothManager extends Component {
                   console.log("User accept");
                 } else {
                   console.log("User refuse");
+                  return;
                 }
               });
             }
@@ -280,7 +275,7 @@ export default class BluetoothManager extends Component {
   }
   componentWillUnmount = () => { // cancel all async tasks herere?
     console.log("Unmounting",this.props.screen);
-    this.removeListeners()
+    this.removeListeners();
   }
 
   handleAppStateChange(nextAppState) {
@@ -310,7 +305,7 @@ export default class BluetoothManager extends Component {
   handleStopScan() {
     //console.log("Scan stop handled",this.state.discoveredP,this.state.emitterStarted,this.props.screen);
     this.setState({ scanning: false });
-    if (this.state.discoveredP == false) {
+    if (this.state.discoveredP == false) { // Need another failsafe in case ble manager is off and no devices in range
       console.log("BLE may not be initialized");
       this.setState({
         emitterStarted: false,
@@ -331,6 +326,7 @@ export default class BluetoothManager extends Component {
 
   handleGunCommand (command) {
     console.log("handling command",command,this.props.screen);
+    /** Parse command and call functions depending on it */
   }
 
   handleDiscoverPeripheral(peripheral){ // TODO, DEBUG THIS TO see why it calls stop and who called stop
@@ -351,7 +347,6 @@ export default class BluetoothManager extends Component {
         console.log("FOUND MATCH");
         this.setState({foundMatch: true})
         BleManager.stopScan().then((data)=>{
-          console.log("WHATUP");
           this.toggleGunConnection(peripheral);}
         );
       }
@@ -359,16 +354,23 @@ export default class BluetoothManager extends Component {
     //peripherals.set(peripheral.id, peripheral);
     //this.setState({ peripherals });
   }
+
+  openCamera(){
+    console.log("Opening Camera");
+    alert("Feature not implemented yet")
+  }
+
+
   editSearchGun = searchID => {
     this.setState({ searchID });
   };
+  
   searchForGun = () => {
     console.log(this.state.searchID)
-    console.log("Searching FOr gun");
     this.setState({searchLoad: true});
     this.startScan();
-    
   }
+
   retrieveConnected(){
     BleManager.getConnectedPeripherals([]).then((results) => {
       if (results.length == 0) {
@@ -408,144 +410,113 @@ export default class BluetoothManager extends Component {
   }
 
   
-desiredPeriferal(peripheral){
-  //console.log("Checking",peripheral);
-  return false;
-}
-  
-getFilterUUID(){
-  console.log("Getting filterUUID");
-  const filterHeader = ""
-}
-
-readData(){
-  peripheral = this.getConnectedPeripheral();
-  if (!peripheral){
-    console.warn("No gun connected");
-    return;
+  desiredPeriferal(peripheral){
+    //console.log("Checking",peripheral);
+    return false;
   }
-  this.test(peripheral)
-}
+    
+  getFilterUUID(){
+    console.log("Getting filterUUID");
+    const filterHeader = ""
+  }
 
-  sendData(/*data*/){
-    peripheral = this.getConnectedPeripheral();
-    if (!peripheral){
+
+  sendMessage(message){ /** Main funcitonality, Takes string and converts it to bytes to send over BLE */
+    //console.log("GunData",this.state);
+    const gun = this.state.connectedGun;
+    console.log("Sending",message,"To",gun.name);
+    if (!gun){ // Pass Error
       console.warn("No gun connected");
       return;
     }
-    BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-      //console.log("Got info",peripheralInfo);
-      var service = '206ac814-ed0b-4204-bd82-e3a0b3bbecc2';
-      var writeCharacteristic = 'BB950764-A597-4E20-8613-E43BF9D1330C';
-      const data = stringToBytes("startGame");
-      BleManager.write(peripheral.id, service, writeCharacteristic,data).then(() => {
-      console.log('wrote:',data);
+    BleManager.retrieveServices(gun.id).then((peripheralInfo) => {
+      var service = gun.advertising.serviceUUIDs[0]; // Main service?
+      var writeCharacteristic = 'BB950764-A597-4E20-8613-E43BF9D1330C'; // Write characteristic, must match on ble end
+      const data = stringToBytes(message);
+      BleManager.write(gun.id, service, writeCharacteristic,data).then(() => {
+        //console.log('Sent:',data);
+      }).catch((error) => {
+        alert("Problem communicating with gun",error);
+        console.warn(error);
+      });
     }).catch((error) => {
-      // Failure code
-      console.warn(error);
-    });
-    }).catch((error) => {
+      alert("Problem communicating with gun",error);
       console.warn('Connection error', error); // Put a toast or something here
     });
   }
 
-toggleGunConnection(peripheral) {
-
-  console.log("Toggling gun connection")
-  this.setState({connectLoad: true});
-    if (peripheral){
-      if (peripheral.connected){
-        //console.log("Disconnecting",peripheral)
-        var service = peripheral.advertising.serviceUUIDs[0];
-        var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';
-        BleManager.stopNotification(peripheral.id, service, RXCharacteristic).then((info) => {
-          console.log("Stopping notification");
-          BleManager.disconnect(peripheral.id).then(() => {
-            //console.log("disconnevting from ",peripheral.id);
-            peripheral.connected = false;
-            this.setState({connectedGun: peripheral, connectLoad: false})
-          }).catch((error) => {
-            console.warn("Disconnecting error",error);
-          })
-        }).catch((error) => {
-          console.log("Stop notification error",error);
-        });
-      }else{
-        setTimeout(() =>{ 
-          console.log("Connection Attemtpt"); // Have some sort of checker to see if component is blured
-          this.setState({connectLoad: false});
-          if (this.state.connectedGun.connected == false){
-            //console.log("No connected Gun",this.state.connectedGun);
-            this.setState({connectionError: 'Could not connect with Gun'})
-          } else{
-            //console.log("happy tiems");
-            this.setState({connectionError: ''});
-          }
-        },5000);
-        BleManager.connect(peripheral.id).then(() => {
-          peripheral.connected = true;
-          this.setState({connectedGun: peripheral})
-          console.log('Connected to ' + peripheral.id);
-          if (this.props.getGunData != undefined){ //-======############ NEED THIS TO TRANSFER gun data
-            this.props.getGunData(peripheral);
-          }
-          this.setState({connectionError: ''})
-          this.saveGunConnection(this.state);
-          // SubScribe to notification
-          BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-            var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';
-            //var service = peripheralInfo.advertising.serviceUUIDs[0]; -- Somehow got changed
-            var service = peripheralInfo.services[0];
-            BleManager.startNotification(peripheral.id, service, RXCharacteristic).then((info) => {
-              //console.log("Starting notificatino");
-              //bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic',({ value, peripheral, characteristic, service }) => {
-              //  console.log("haha",value);  
-              //});
-              this.setState({connectLoad: false});
+  toggleGunConnection(peripheral) {
+    this.setState({connectLoad: true});
+      if (peripheral){
+        if (peripheral.connected){
+          //console.log("Disconnecting",peripheral)
+          var service = peripheral.advertising.serviceUUIDs[0];
+          var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';
+          BleManager.stopNotification(peripheral.id, service, RXCharacteristic).then((info) => {
+            //console.log("Stopping notification");
+            BleManager.disconnect(peripheral.id).then(() => {
+              //console.log("disconnevting from ",peripheral.id);
+              peripheral.connected = false;
+              this.setState({connectedGun: peripheral, connectLoad: false})
             }).catch((error) => {
-              console.warn("Notification error",error);
+              console.warn("Disconnecting error",error);
+            })
+          }).catch((error) => {
+            console.log("Stop notification error",error);
+          });
+        }else{
+          setTimeout(() =>{ 
+            this.setState({connectLoad: false});
+            if (this.state.connectedGun.connected == false){
+              //console.log("No connected Gun",this.state.connectedGun);
+              this.setState({connectionError: 'Could not connect with Gun'})
+            } else{
+              //console.log("happy tiems");
+              this.setState({connectionError: ''});
+            }
+          },1000);
+          BleManager.connect(peripheral.id).then(() => {
+            peripheral.connected = true;
+            this.setState({connectedGun: peripheral})
+            console.log('Connected to ' + peripheral.id);
+            if (this.props.getGunData != undefined){ //-======############ NEED THIS TO TRANSFER gun data
+              this.props.getGunData(peripheral);
+            }
+            this.setState({connectionError: ''})
+            this.saveGunConnection(this.state);
+            // SubScribe to notification
+            BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
+              var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';
+              //var service = peripheralInfo.advertising.serviceUUIDs[0]; -- Somehow got changed
+              var service = peripheralInfo.services[0];
+              BleManager.startNotification(peripheral.id, service, RXCharacteristic).then((info) => {
+                //console.log("Starting notificatino");
+                //bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic',({ value, peripheral, characteristic, service }) => {
+                //  console.log("haha",value);  
+                //});
+                this.setState({connectLoad: false});
+              }).catch((error) => {
+                console.warn("Notification error",error);
+                this.setState({connectLoad: false});
+                this.setState({connectionError: 'Problems communicating with gun'})
+              });
+            }).catch((error) => {
               this.setState({connectLoad: false});
+              console.warn("Retrieve service error",error);
               this.setState({connectionError: 'Problems communicating with gun'})
+
             });
           }).catch((error) => {
             this.setState({connectLoad: false});
-            console.warn("Retrieve service error",error);
-            this.setState({connectionError: 'Problems communicating with gun'})
-
-          });
-        }).catch((error) => {
-          this.setState({connectLoad: false});
-        console.log('Connection error', error);
-        this.setState({connectionError: 'Could not connect to gun'})
-      });
-      
+          console.log('Connection error', error);
+          this.setState({connectionError: 'Could not connect to gun'})
+        });
+        
+      }
     }
   }
-}
     
-  test(peripheral) {
-            // Test using bleno's pizza example
-            // https://github.com/sandeepmistry/bleno/tree/master/examples/pizza
-            BleManager.retrieveServices(peripheral.id).then((peripheralInfo) => {
-              //console.log(peripheralInfo);
-              var service = peripheralInfo.advertising.serviceUUIDs[0];
-              //console.log(service);
-              var notifyCharacteristic = 'BB950764-A597-4E20-8613-E43BF9D1330C';
-              var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';  
-                BleManager.read(peripheral.id, service, RXCharacteristic)
-                .then((readData) => {
-                  // Success code
-                  console.log('Read: ' + readData);
-                  var sensorData = bytesToString(readData)
-                  console.log("dta",sensorData);
-                })
-                .catch((error) => {
-                  // Failure code
-                  console.log(error);
-                });
-              
-            });
-    }
+  
     
 
 
@@ -723,7 +694,7 @@ toggleGunConnection(peripheral) {
           autoCorrect = {false}
         />
         <Text style= {{fontSize: 24, textAlign: 'center'}}> OR </Text>
-        <Button title= "Scan QR"  onPress={() => this.readData()} load={this.state.searchLoad}>
+        <Button title= "Scan QR"  onPress={() => this.openCamera()} load={this.state.searchLoad}>
         </Button>
         <Divider style={{ backgroundColor: 'blue' }} />
           {(this.state.connectedGun == null) &&

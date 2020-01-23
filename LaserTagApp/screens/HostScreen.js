@@ -99,11 +99,11 @@ export default class HostScreen extends Component {
       numTeams = 0;
     }
 
-    if (this.state.ammo == 0){
+    if (ammo == 0){
       ammo = -1
     }
-    if (this.state.num_lives == 0){
-      lives = 50 // Ask about this
+    if (lives == 0){
+      lives = -1 // Ask about this
     }
     // Do empty String validation errors here
     const date = this.state.gameDate;
@@ -530,6 +530,21 @@ export default class HostScreen extends Component {
     return (
       <ModalDropdown 
       defaultValue = "Select Team"
+      style={{
+        backgroundColor: '#209cee',
+        alignSelf: 'flex-end',
+        justifyContent: 'center',
+        padding: 2,
+        borderWidth: 1,
+        borderRadius: 5,
+        height: 30,
+        borderColor: "#EEEEEE"
+      }}
+      textStyle=
+      {{
+        color: 'white',
+        fontSize: 10,
+      }}
       onSelect = { selectedIndex => this.selectTeam(selectedIndex,index)}
       options={availibleTeams}/> 
     )
