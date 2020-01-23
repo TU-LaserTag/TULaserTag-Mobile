@@ -93,17 +93,17 @@ export default class HostScreen extends Component {
     let lives = this.state.num_lives;
     let gamemode = this.state.gameModeText; // I should not have to validate this but here we are...
     let selectionText = this.state.selectionText;
-    let numTeams = this.state.numTeams;
+    let numTeams = this.state.num_teams;
     if (gamemode == 'solo'){
       selectionText = 'manual';
       numTeams = 0;
     }
 
     if (this.state.ammo == 0){
-      maxammo = -1
+      ammo = -1
     }
     if (this.state.num_lives == 0){
-      lives = -1
+      lives = 50 // Ask about this
     }
     // Do empty String validation errors here
     const date = this.state.gameDate;
@@ -132,7 +132,7 @@ export default class HostScreen extends Component {
       host: this.state.host,
     }
 
-    
+    console.log("Gamepayload",GamePayload)
     this.sendCreateGameRequest(GamePayload);
     //this.handleCreateGameResponse("noope");
   }
@@ -177,7 +177,8 @@ export default class HostScreen extends Component {
           this.handleCreateGameResponse(gameResponse);
         } else {
           console.log("Got Error",request);
-          // Needs more error handling
+          this.setState({hostLoading: false});
+          alert("Something went wrong while creating your game");
           //this.setState({joinGameError: "Could not connect to server, Please try again later",
           //              loading: false});     
         }
@@ -191,6 +192,7 @@ export default class HostScreen extends Component {
   requestCreateTeams(gameData){ 
     gameID = gameData.id;
     payload = this.state.teamList; // TEams sent
+    console.log
     var getURL = Web_Urls.Host_Url + "/createbatch/team/"+gameID;  
     var request = new XMLHttpRequest();
       request.onreadystatechange = (e) => {
@@ -203,7 +205,8 @@ export default class HostScreen extends Component {
           this.handleCreateTeamsResponse(teamResponse,gameData);
         } else {
           console.log("Got Error",request);
-          // Needs more error handling
+          alert("Something went wrong while Connecting teams to the game"),
+          this.setState({hostLoading: false});
           //this.setState({joinGameError: "Could not connect to server, Please try again later",
           //              loading: false});     
         }
@@ -234,14 +237,15 @@ export default class HostScreen extends Component {
           console.log("Joining Game?",response)
           this.props.navigation.navigate("Lobby",{
             userData: this.state.userData,
-            gameData: response, // or this.state.gameData
+            gameData: response, // or this.state.gameData // This may return different data than expected on lobby
             teamData: this.state.teamData,
-            gunData: this.state.gunData
+            gunData: this.state.gunData,
+            gameLength: this.state.game_length,
             });
         } else {
           console.log("Error",request)
-          this.setState({joinGameError: "Could not Join Game",
-                        loading: false});     
+          alert("Something went wrong while trying to connect to created game"),
+          this.setState({hostLoading: false});   
         }
       }
       request.open('GET', getURL);
@@ -276,7 +280,8 @@ export default class HostScreen extends Component {
   }
   handleTeamListResponse = (teamResponse) =>{
     //console.log("Handling Respons",teamResponse);
-    //  Do any other validating/filtering here  ** Possibly dont show ones that are not in a league
+    // Do any other validating/filtering here  ** Possibly dont show ones that are not in a league
+    
     this.setState({all_teams: teamResponse});
     this.populateAvailibleTeams();
   }
@@ -453,6 +458,7 @@ export default class HostScreen extends Component {
     //console.log("Populatinga vailible teams");
     const all_teams = this.state.all_teams;
     //console.log(all_teams)
+    all_teams.push({color: "", name:"New Team", color_name: '', team_id:null});
     let availibleTeams = all_teams.map( (team) =>{
       if (team.name != ""){
         return team.name;
@@ -470,7 +476,7 @@ export default class HostScreen extends Component {
   populateTemplateTeams = () => {
     const teamList = this.state.teamList;
     for (i = 1; i <=this.state.num_teams; i ++){
-      teamList.push({color: "", name:"New Team "+i, team_id:null});
+      teamList.push({color: "", name:"New Team "+i, color_name: '', team_id:null});
     }
       this.setState({teamList});
   }
@@ -480,7 +486,7 @@ export default class HostScreen extends Component {
     if (listlen < num_teams){
       for (i = listlen; i <num_teams; i ++){
         let index = i+1;
-        teamList.push({id:index, name:"Team "+index, key:"t"+index});
+        teamList.push({color: "", name:"New Team "+index, color_name: '', team_id:null});
       }
     } else if (listlen > num_teams){
       for (i = 0; i < listlen - num_teams; i ++){

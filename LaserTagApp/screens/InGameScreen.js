@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList} from 'react-native';
-import { Text,Button, ThemeProvider, Input, Divider, ListItem} from 'react-native-elements';
+import {StyleSheet,View,NativeEventEmitter,AppState,NativeModules, ActivityIndicator, FlatList, Dimensions} from 'react-native';
+import { Text,Button, Icon, ThemeProvider, Input, Divider, ListItem,Card,Overlay} from 'react-native-elements';
 import { LaserTheme } from '../components/Custom_theme';
 import CustomHeader from '../components/CustomHeader';
 import GunStatusDisplay from '../components/GunStatusDisplay'
@@ -8,10 +8,12 @@ import { stringToBytes, bytesToString } from 'convert-string';
 import BluetoothManager from '../components/Ble_manager'
 import {Web_Urls} from '../constants/webUrls';
 import { Item } from 'native-base';
+import storage from '../Storage'
+
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
-//import Title from '../components/Ghs_Comps/Title'
-
+const dimensions = Dimensions.get('window');
+const window_width = Math.round(dimensions.width);
 
 export default class InGameScreen extends Component {
   static navigationOptions = {
@@ -21,401 +23,500 @@ export default class InGameScreen extends Component {
   constructor(){
     super()
     this.state = {
-      userData: null,
-      scanning:false,
-      key: '',
-      appState: '',
-      keyError: '',
-      discoveredP: false,
-      loading: true,
-      loadingGame: false,
-      gameList: [],
-      joinGameError: false,
-      gameListHeader: '',
-      seachMode: 'public',
-      gunData: null,
+      loading: false,
+      userData: {},
+      gunData: {},
+      gameData: {},
+      teamData: {},
+      playerList: null,
+      loggedIn: true,
+      gameError: '',
+      gameClock: 3600,
     }
-    //console.log("construct");
-    //this.checkBLE(); Should get ran in GunStatusDisplay
-    this.loadStorage()  // Checks storage and then builds upon startBLEManager
+    
   }
-  loadStorage = () => {
-    console.log("loading storage");
-    global.storage.load ({
-    key: 'gunData',
-    autoSync: true,
-    syncInBackground: true,
-    syncParams: {
-      extraFetchOptions: {
-        // blahblah
-      },
-      someFlag: true
+  
+  componentDidMount(){
+    console.log("InGame Mount")
+    const userData = this.props.navigation.getParam("userData", null);
+    const gunData = this.props.navigation.getParam("gunData", null);
+    const gameData = this.props.navigation.getParam("gameData", null);
+
+    console.log("Got data:",userData,gunData,gameData)
+    this.setState({userData, gunData,gameData});
+    if (gameData == null){
+      console.log("No Game Data");
+      // How to get game ID?  
     }
-    })
-    .then(ret => {
-      if (this.state.gunData == null){
-        this.setState({gunData: ret.conGun})
+
+    if (userData == null){
+      console.log("no userData")
+      this.loadStorage();
+    }
+
+    // Set refreshInterval interval
+    
+    this.refresh();
+
+    // Start gameClock
+    this.gameClockLoop = setInterval(()=> { // Dont forget to destroy (clearintercal)
+      const curClock = this.state.gameClock;
+      if (curClock === 0){
+        alert("Game Finished");
+        // Send message to gun 
+        clearInterval(this.gameClockLoop)
+      }else{
+        this.setState({gameClock: curClock -1});
       }
-    })
-    .catch(err => {
+
+    }, 1000);
+  } 
+
+  componentWillUnmount() { // cancel all async tasks herere? Appstate change?
+    console.log("unmouting inGame ");
+    clearInterval(this.gameClockLoop)
+  }
+
+    // * Helpers*----- ***//
+    loadStorage = () => {
+      global.storage.load ({
+      key: 'userData',
+      autoSync: true,
+      syncInBackground: true,
+      syncParams: {
+        extraFetchOptions: {
+          // blahblah
+        },
+        someFlag: true
+      }
+  })
+  .then(userData => {
+  this.setState({userData})
+  })
+  .catch(err => {
     // any exception including data not found
     // goes to catch()
-      console.log(err.message);
-      switch (err.name) {
-        case 'NotFoundError':
-          return false;
-        case 'ExpiredError': // Gun only lasts for so long
-          return false;
-      }
-    });
+    console.log(err.message);
+    switch (err.name) {
+      case 'NotFoundError':
+        console.log((" Nodata"));
+        break;
+      case 'ExpiredError':
+        // TODO
+        break;
+    }
+  });
   }
-  getGunData = (gunData) =>{
-    //console.log("Join got gun data")
-    this.setState({gunData});
-  } 
-    
-  
-    componentDidMount(){
-        console.log("InGame Mount")
-        const userData = this.props.navigation.getParam("userData", null);
-        const gunData = this.props.navigation.getParam("gunData", null);
-        console.log("Got userData",userData)
-        this.setState({userData, gunData})
-        this.refresh();
-        
-    } 
+  refresh = () =>{
+    console.log("Refreshing");
+    // Things needed to check
+    /**Gameover
+     * game/info
+     * hits?
+     * fire?
+     */
+    this.requestGameInfo(); // Stores game data into gameData
+    this.requestGameOver();
+  }
 
-    componentWillUnmount() { // cancel all async tasks herere? Appstate change?
-      console.log("unmouting JoinScreen ");
-    }
+  keyExtractor = (item, index) =>index.toString()
 
-    // Handlers
-  
-    joinGameHandleAppStateChange(nextAppState) {
-      if (this.state.appState.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('JoinGame Screen has come to the foreground!')
-      }
-      this.setState({appState: nextAppState});
-    }
+  fireGun = () =>{
+    console.log("pew pew");
+  }
 
-    joinPressed = (game) => {
-      console.log("Tying to join",game.name);
-      const gunConnected = this.state.gunData.connected
-      if (!gunConnected){
-        console.log("Gun not connected")
-        this.setState({joinGameError: "Connect to gun before joining game"});
-        return;
-      } else{ // any other error/game validateion
-
-      }
-      // Finally attempt to join the game
-        this.requestJoin(game);
-      
-    };
-  
-      requestGames() { // Request all games
-        this.setState({loading: true,
-                        gameList: [],
-                        searchMode: 'public',
-                        gameListHeader: "Public Games:"
-        })
-        var getURL = Web_Urls.Host_Url + "/game"
-        console.log("Sending request to ",getURL)
-        var request = new XMLHttpRequest();
-          request.onreadystatechange = (e) => {
-            if (request.readyState !== 4) {
-              return;
+  isEmptyObject = (obj) => {
+    return (Object.entries(obj).length === 0 && obj.constructor === Object)
+  }
+  getSelfStatsFromUsername(statsList,username){
+      //teamList = this.state.teamData;
+      //console.log("Set teamlist username",username)
+      myStats = null;
+      if (statsList == null || statsList == undefined || statsList.length == 0){
+        console.log("No Stats")
+        return null;
+      } else{
+        if (statsList.length == 0){ // No teams have been created/assigned to game yet
+          console.log("No Stats");
+          return null;
+        } else{
+          for (var i = 0; i < statsList.length; i++){
+            let player = statsList[i];
+            if (player.player_username == undefined){
+              console.log("usrname is undefined? - getstats from username");
+              // pusername = mplayer.username
             }
-            if (request.status === 200) {
-              responseList = JSON.parse(request.response);
-              //console.log
-              this.handleGameListResponse(responseList);
-            } else {
-              // Needs more error handling
-              console.log("Error",request)
-              this.setState({joinGameError: "Could not connect to server, Please try again later",
-                           loading: false}); 
-              // FOR USE OFFLINE    
-              //responseList =[{"id":11,"starttime":null,"endtime":null,"maxammo":10,"style":"solo","timedisabled":10,"maxLives":2,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":0,"players_alive":null,"team_selection":"automatic","teams_alive":null,"locked":false,"name":"Skilled Shooting","host":"Caleb Anthony"},{"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-17-2020","code":"","num_teams":3,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Dranderson"}]
-              //this.handleGameListResponse(responseList);
+            if (player.player_username == username) {
+              myStats = player;
+              return myStats
             }
           }
-          request.open('GET', getURL);
-          request.send();
-      }
-
-      requestPrivateGames() { // Request private game(s) accoring to key
-        const searchKey = this.state.key;
-        this.setState({
-          loading: true,
-          gameList: [],
-          searchMode: 'private',
-          gameListHeader: "Private Games: "+searchKey
-        });
-        var getURL = Web_Urls.Host_Url +"/game/code/" + searchKey
-        console.log("Sending request to ",getURL)
-
-        var request = new XMLHttpRequest();
-          request.onreadystatechange = (e) => {
-            if (request.readyState !== 4) {
-              return;
-            }
-            if (request.status === 200) {
-              responseList = JSON.parse(request.response);
-              
-              this.handleGameListResponse(responseList);
-            } else {
-              console.log("Error",request)
-              this.setState({joinGameError: "Could not connect to server, Please try again later",
-                            loading: false});     
-            }
-          }
-          request.open('GET', getURL);
-          request.send();
-      }
-    
-      requestJoin(game){
-        gunMAC = this.state.gunData.advertising.serviceUUIDs[0].slice(-12);
-        console.log(gunMAC)
-        console.log(this.state.userData);
-        this.setState({loadingGame: true})
-        var getURL = Web_Urls.Host_Url +"/game/"+game.id+"/"+this.state.userData.username+"/"+ gunMAC
-        console.log("Sending request to ",getURL)
-        var request = new XMLHttpRequest();
-          request.onreadystatechange = (e) => {
-            if (request.readyState !== 4) {
-              return;
-            }
-            if (request.status === 200) {
-              response = JSON.parse(request.response);
-              console.log("Joining Game?",response)
-              this.handleJoinGame(response);
-            } else {
-              console.log("Error",request)
-              this.setState({joinGameError: "Could not Join Game",
-                            loading: false});     
-            }
-          }
-          request.open('GET', getURL);
-          request.send();
         }
-
-
-      handleGameListResponse(response) {
-        const gameList = response
-        //console.log("Handling",response)
-        if (gameList.length < 1){
-          this.setState({joinGameError: "No Games Found",
-                        loading: false});     
-        } else{
-        //console.log("Setting game List",gameList)
-          this.setState({gameList: response,   
-                        loading: false,
-                        joinGameError: ""});
-          }            
+        
       }
-    
-      handleJoinGame(response){
-        console.log("Joining Game",response);
-        const gameData = response
-        this.props.navigation.navigate('Lobby',{userData:this.state.userData,gameData:gameData,gunData:this.state.gunData})
-      }
+      //console.log("Retrurning myTEam",myTeam)
+    return myTeam;
+  }
+  /********* ------ */
 
+//** HTTP REQUESTS----- */
+// GET
+  
 
+  requestGameInfo(){
+    const game_id = 29 //this.state.gameData.ga me.id;
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/game/info/"+game_id // For somereason not returning evertyih
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          gameInfo = JSON.parse(request.response);
+          console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
+          let  gameData = this.state.gameData;
+              gameData = gameInfo[0];
 
-      switchSearchMode = () => {
-        const newMode =  ((this.state.searchMode == 'private') ? 'public' : 'private');
-        if (newMode == 'public'){
-          this.setState({searchMode: 'public',
-                        key: ''
-          });
-        } else{
-            this.setState({searchMode: 'private'})
+            if (gameData.style == 'solo'){ // If solo match
+              const players = gameData.stats;
+              var isInlist = players.find(player => {
+                return player.player_username === this.state.userData.username;
+              })
+              if (isInlist != undefined){
+                //console.log("Youre in!",isInlist);
+                const player = isInlist;
+                this.setState({loggedIn: true});
+              } else{
+                console.warn("You have been removed from this match");
+                this.setState({loggedIn: false});
+              }  
+              this.setState({loading: false, gameData: gameData});
+            } else{
+              //Refreshes team data, Array gets un sorted however TODO: prevent array shuffling after naming a team
+              const playerList = gameData.stats;
+              const teamData = gameData.teams;
+              this.setState({teamData,playerList});
+            }
+            //console.log("Setting state")
+            this.setState({loading: false, gameData: gameData});
           
+        } else {
+          console.log("Erroe when Sdearching for game data",request)
+          this.setState({gameError: "Could not connect to server, Please try again later",
+                        loading: false});     
         }
-        this.refresh(newMode)
       }
+      request.open('GET', getURL);
+      request.send();
+  }
+  
+  requestGameOver(){
+    const game_id = 29 //this.state.gameData.game.id;
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/game/game/"+game_id // For somereason not returning evertyih
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) { // Error 500, Cannot read property 'split' of null db.js:989:52 (when calling gameover on a game with no endTime)
+          gameInfo = JSON.parse(request.response);
+          console.log("Got GameoverINfo:",gameInfo); // Gets strange on team game
+          this.setState({loading: false, gameData: gameData});
+          
+        } else {
+          console.log("Erroe when Sdearching for game data",request)
+          this.setState({gameError: "Could not connect to server, Please try again later",
+                        loading: false});     
+        }
+      }
+      request.open('GET', getURL);
+      request.send();
+  }
 
-      refresh = (mode) => {
-        
-        if (this.state.key == ''){
-          mode = 'public'
-        }
-        if (mode == 'public'){
-          this.requestGames();
-        } else{
-          if (!this.getKeyStatus()){
-            this.requestPrivateGames()
-          }
-        }
-      }
-      getGameStatus = () => {
-        if (this.state.key == "") {
-          return "View Games"
-        } else{
-          return "Join Game"
-        }
-      }
-      getKeyStatus = () => {
-        if (this.state.key == "") {
-          return true;
-        } else{
-          return false;
-        }
-      }
 
-      keyExtractor = (item, index) =>index.toString()
-      renderGameList = () => {
-        const gameList = this.state.gameList;
-        if (gameList == undefined){
-          return (
+/*******---------**** */
+      
+    
+   
+
+/** Rendering functions ------ */
+  renderGameHeader(gameData){
+    console.log("Rendewring Data",gameData)
+    if (gameData == null){
+      console.log("no dagta")
+    }else{
+      return(
+        <View  titleStyle= {{ fontSize: 20}} style={{ alignItems: 'center', backgroundColor:'white', borderTopColor: 'white'}}>
+              <Text style ={{fontSize: 25, fontWeight: 'bold'}}>{gameData.name} </Text>
+        </View>
+      );
+    }
+  }
+
+
+  rendergameTimer(gameData){
+    const gameTime = this.state.gameClock;
+    var formattedHours= Math.floor(gameTime/60/60);
+    var formattedMinutes = Math.floor(gameTime/60) %60;
+    var formatedSeconds = gameTime %60
+    if (formattedHours < 10){
+      formattedHours = "0"+formattedHours;
+    }
+    if (formattedMinutes < 10){
+      formattedMinutes = "0"+formattedMinutes;
+    }
+    if (formatedSeconds < 10){
+      formatedSeconds = "0"+formatedSeconds;
+    }
+    const endTime = formattedHours + ":" +formattedMinutes + "." + formatedSeconds;
+    //console.log(endTime);
+    return (
+      <View style = {{backgroundColor: 'white', alignItems: 'center'}}><Text style = {{ fontSize: 30, fontWeight: '200'}}>{endTime}</Text></View>
+    )
+  }
+
+
+  renderTeamHeader(teamData){
+    //console.log("rendering",teamData);
+    var teamItemList = [];
+    var teamPair = [];
+    for (i = 0; i < teamData.length; i ++){
+      const team = teamData[i];
+      let marginDir = (i%2 == 0) ? -2:2;
+      let teamName= team.name;
+      let teamColor = team.color; // Make background white to get contrast of text?                          
+      teamPair.push(<View style={{borderWidth: 2,borderRadius: 5, marginHorizontal: 3, backgroundColor: teamColor, justifyContent: 'center' }}><Text style={{fontWeight: 'bold', }}>{teamName}</Text><Divider></Divider><Text style = {{ fontWeight:'200', alignSelf: 'center'}}>Score</Text></View>);
+      if (marginDir == 2){
+        teamItemList.push(<View key={i} style= {{flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10}}>{teamPair}</View>);
+        teamPair = [];
+      }
+    }
+    return (
+      <View style={{paddingTop:5}}>{teamItemList}</View>
+    )
+  }
+
+
+  renderTeamHeaders(gameData) {
+    if (gameData == null || this.isEmptyObject(gameData)){
+      return( 
+        <View>
             <ActivityIndicator size="large" color="#61578b"
-            style = {{
-              paddingTop: 30,
-              justifyContent: 'center', 
-              alignContent: 'center'
-             }} />
-          )
-        }
-        if (this.state.loading == true){
-          return (
-            <ActivityIndicator size="large" color="#61578b"
-            style = {{
-              paddingTop: 30,
-              justifyContent: 'center', 
-              alignContent: 'center'
-             }} />
-          )
-        } else{
-          if (gameList.length == 0){
-            return (
-                  <Text></Text>
-            )
-
-          } else{
-            return(
-              <FlatList
-                listKey = "gameList"
-                keyExtractor={this.keyExtractor}
-                data={gameList}
-                renderItem={this.renderGame}
-              />
-
-            )
-          }
-        }
-      }
-      renderJoinError = () => {
-        if (this.state.joinGameError != ''){
-          return (
-          <Text style = {{backgroundColor: 'red', textAlign: 'center', color: 'white'}}>{this.state.joinGameError}</Text>
+              style = {{
+                  paddingTop: 30,
+                  justifyContent: 'center', 
+                  alignContent: 'center'
+              }} />
+        </View>
+      )
+    } else {
+      if (gameData.style == 'solo'){ // Place Leaderboard herec // {this.renderLeaderboard(gameData)}
+        return <View><Text>LeaderBoard:</Text></View>
+      } else{
+        const teamData = gameData.teams;
+        const numTeams = gameData.num_teams;
+        if (teamData == null){
+          console.warn("No teams loaded yet");
+          return( 
+            <View>
+                <ActivityIndicator size="large" color="#61578b"
+                    style = {{
+                        paddingTop: 30,
+                        justifyContent: 'center', 
+                        alignContent: 'center'
+                    }} />
+              </View>
           )
         }else{
-          return 
+          if (teamData.length == 0){
+            console.warn("NO Teams???")
+            this.setState({gameError: 'Error No Teams'})
+          } else {
+            //console.log("Got Teams")
+          }
         }
-      }
-      rendergameListHeader = () => {
-        const searchMode = this.state.searchMode
-        const headerText = this.state.gameListHeader;
-        let searchIcon = '';
-        let searchType = '';
-        if (searchMode == 'public'){
-          searchIcon = 'earth'
-          searchType = 'antdesign'
-        } else{
-          searchIcon = 'key'
-          searchType = 'entypo'
-        }
-        return (
-            <ListItem
-              key="header"
-              containerStyle = {{
-                backgroundColor: '#ae936c',
-                margin: 0
-              }}
-              onPress={() => this.switchSearchMode()}
-              title={headerText}
-              leftIcon={{ name: searchIcon, type: searchType }}
-              bottomDivider
-            />
-          )    
-      }
-      renderGame= ({ item }) => {
-        let gameStartDate = Date(item.date + ' ' +item.starttime);
-        let gameEndDate = Date(item.date + ' ' +item.endtime);
-        let startDate = gameStartDate.toString().slice(0,16);
-        //let gameStartTime = gameStartDate.toString().slice(16,24);
-        //et gameEndTime = gameEndDate.toString().slice(16,24);
-        //console.log("gameDates: ",gameStartDate,gameEndDate);
-        //console.log("StartIme",gameStartTime,'-',gameEndTime);
-        const gameTimeStamp = startDate
-        const gameHost= item.host;
-        const gameStyle = item.style;
-        let teamInfo = ''
-        let gameIcon = ''
-        if (gameStyle == 'solo'){
-          gameIcon = 'user';
-          teamInfo = 'FFA'
-        } else if(gameStyle == 'team'){
-          gameIcon = 'users';
-          teamInfo = item.num_teams + ' Teams'
-        }
-        //console.log("RENDERGAM",item.id)
-        return (      
-        <ListItem
-          key = {"Game"+item.id}
-          onPress={() => this.joinPressed(item) }
-          title={item.name}
-          subtitle={gameTimeStamp}
-          subtitleStyle = {{
-            fontSize: 12,
-            color: 'gray' // Make dynamic so that close times are red?
-          }}
-          leftIcon={{ name: gameIcon, type: 'feather' }}
-          rightTitle = {gameHost}
-          rightTitleStyle = {{
-            fontSize: 12
-          }}
-          rightSubtitle = {teamInfo}
-          bottomDivider
-          chevron
-        />
-      )}
-      renderSpinner = () => {
-        if (this.state.loading == true){
           return(
-            <Spinner 
-              key="spiner"
-              style = {{height:5,
-              paddingTop: 43,
-              paddingLeft: 15,
-              justifyContent: 'center', 
-              alignContent: 'center'
-              }} size='small' color='blue' />
-          )
-        } else{
-          return (<View/>)
-        }
-      }
-      render() {
-        return(
-          <ThemeProvider {...this.props}  theme={LaserTheme}>
-           <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Join Game" headerType = "join" />
-           <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Ingame"></BluetoothManager>
-            
-            <Button style= {{size: 4,
-                            marginHorizontal: 10,
-                            marginVertical: 5
-                            
-            }}
-              title= "Fire"
-              onPress={() => this.fireGun()}
-              />
+            <View style= {{backgroundColor:'white', borderTopColor: 'white'}}>
+            {this.renderTeamHeader(teamData)}
+            </View>
           
-            </ThemeProvider>
-          );
+          )
         }
+    }
+  }
+  renderSelfStats(gameData){
+    //console.log("AllStats",gameData.stats);
+    const gameStats = gameData.stats;
+    const myStats = this.getSelfStatsFromUsername(gameStats,this.state.userData.username);
+    //console.log("myStats",myStats,gameStats)
+    if (myStats == null){
+      return(
+        <Card title="Loading User Stats.." containerStyle={{borderWidth:1,}}>
+            <ActivityIndicator size="large" color="#61578b"
+              style = {{
+                  paddingTop: 30,
+                  justifyContent: 'center', 
+                  alignContent: 'center'
+              }} />
+          </Card>
+      )
+    } else{
+      //console.log("Rendering stats",myStats);
+      const username = myStats.player_username;
+      const numKills = myStats.killed.length;
+      const lives = myStats.remaining_lives; // If -1, infinite symbol (lives)
+      const color = myStats.team_color;
+      const points = myStats.points;
+      const ammoCap = gameData.maxammo; // If -1: infinite
+      const ammo = (ammoCap == -1) ? '∞' : ammoCap - myStats.rounds_fired;
+      // Add dynamic color based on lives/points/ammo
+      return(
+        <View>
+        <Card title={username} titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, borderWidth:1, borderTopColor: color, borderTopStartRadius: 10, borderTopEndRadius: 10}}>
+          <View style={{flexDirection: 'row', justifyContent: 'space-around', borderColor: "#EEEEEE", borderWidth: 1, borderRadius: 10, borderBottomLeftRadius:0, borderBottomRightRadius:0,  borderBottomColor: "#FFFFFF"}}><Text style={{fontSize: 29, fontWeight: '200'}}>{points}</Text><Text style={{fontSize: 29, fontWeight: '200'}}>{numKills}</Text></View>
+          <View style={{flexDirection: 'row', marginTop: -5, justifyContent: 'space-around', borderTopColor: "#FFFFFF", borderWidth: 1, borderRadius: 10, borderTopLeftRadius:0, borderTopRightRadius:0, borderBottomColor: "#EEEEEE", borderRightColor: "#EEEEEE", borderLeftColor: "#EEEEEE"}}><Text style={{fontSize: 15, fontWeight: '300'}}>Points</Text><Text style={{fontSize: 15, fontWeight: '300'}}>Kills</Text></View>
+          <View style={{flexDirection: 'row', justifyContent: 'space-around',paddingTop: 5, margin: 5}}><View style={{flexDirection: 'row'}}><Icon color= 'red' name="heart" type="feather" size={40}></Icon><Text style={{fontSize: 35, fontWeight: 'bold'}}> {lives}</Text></View><View style={{flexDirection: 'row'}}><Icon name = 'ammunition' size = {35}  color= "black"  type = 'material-community'/><Text style={{fontSize: 35, fontWeight: 'bold'}}> {ammo}</Text></View></View>
+        </Card>
+          {this.renderKillFeed(myStats)}
+        </View>
+      )
+    }
+  }
+
+  renderKillFeed(myStats){ // REnders kills a player may have
+    //console.log("AllStats",gameData.stats);
+    
+
+    //console.log("myStats",myStats,gameStats)
+    if (myStats == null){
+      return(
+        <Card title="Loading Kill Feed" containerStyle={{borderWidth:1,}}>
+            <ActivityIndicator size="large" color="#61578b"
+              style = {{
+                  paddingTop: 30,
+                  justifyContent: 'center', 
+                  alignContent: 'center'
+              }} />
+          </Card>
+      )
+    } else{
+      const kills = myStats.killed;
+      console.log("Kills",kills)
+      if (kills.length == 0){
+        return (
+          <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
+          <Text>No Kills</Text>
+          </Card>
+        )
       }
+      return(
+        <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
+        <FlatList
+          listKey = "Kills"
+          keyExtractor={this.DataKeyExtractor}
+          data={flatListData}
+          renderItem={this.renderKill}
+          extraData={this.state}
+        />
+        </Card>
+      )
+    }
+  }
+
+  renderKill({item}){
+    console.log("Rendering kill",item);
+    const timeAgo = "3 mins ago";
+    return(
+      <ListItem
+      key="header"
+      containerStyle = {{
+        backgroundColor: '#ae936c',
+        margin: 0
+      }}
+      title="Kills"
+      subtitle = {timeAgo}
+      bottomDivider
+    />
+  )
+  }
+
+  renderGameDataCard = () =>{ /* More to come!!! */
+    const gameData = this.state.gameData;
+    if (gameData == null || gameData == undefined){
+      return( 
+      <View>
+        <Card title="Loading" containerStyle={{borderWidth:20}}>
+          <ActivityIndicator size="large" color="#61578b"
+            style = {{
+                paddingTop: 30,
+                justifyContent: 'center', 
+                alignContent: 'center'
+            }} />
+        </Card>
+      </View>
+      )
+    } else { // Show Game Header (basic scoreboard)
+      return( 
+        <View>
+            {this.renderSelfStats(gameData)}
+        </View>
+      )
+    }
+  }
+  renderSpinner = () => {
+    if (this.state.loading == true){
+      return(
+        <Spinner 
+          key="spiner"
+          style = {{height:5,
+          paddingTop: 43,
+          paddingLeft: 15,
+          justifyContent: 'center', 
+          alignContent: 'center'
+          }} size='small' color='blue' />
+      )
+    } else{
+      return (<View/>)
+    }
+  }
+
+  DataKeyExtractor = (item, index) => index.toString()
+  render() {
+    flatListData = [{id: 0, name:"GameData", key: 1}];
+    gameData = this.state.gameData;
+    return(
+      <ThemeProvider {...this.props}  theme={LaserTheme}>
+        <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Match" headerType = "game" />
+        <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Game"></BluetoothManager>
+        {this.rendergameTimer(gameData)}
+        {this.renderGameHeader(gameData)}
+        {this.renderTeamHeaders(gameData)}
+        <FlatList
+          listKey = "main"
+          keyExtractor={this.DataKeyExtractor}
+          data={flatListData}
+          renderItem={this.renderGameDataCard}
+          extraData={this.state}
+        />
+        <Button style= {{size: 4,
+                        marginHorizontal: 10,
+                        marginVertical: 5
+                        
+        }}
+          title= "Fire"
+          onPress={() => this.fireGun()}
+          />
+      
+        </ThemeProvider>
+      );
+    }
+  }
   
       
   

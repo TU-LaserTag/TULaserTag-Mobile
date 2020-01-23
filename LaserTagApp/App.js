@@ -13,6 +13,7 @@ import HostScreen from './screens/HostScreen'
 import JoinGameScreen from './screens/JoinGameScreen';
 import SignupScreen from './screens/SignupScreen';
 import GameLobbyScreen from './screens/GameLobbyScreen';
+import InGameScreen from './screens/InGameScreen';
 
 // Screen setup
 const RootStack = createStackNavigator(
@@ -23,7 +24,8 @@ const RootStack = createStackNavigator(
     Join: JoinGameScreen,
     Host: HostScreen,
     Gun: GunScreen,
-    Lobby: GameLobbyScreen   
+    Lobby: GameLobbyScreen,
+    Game: InGameScreen 
   },
   {
     initialRouteName: "Login",

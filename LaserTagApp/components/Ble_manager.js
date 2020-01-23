@@ -459,7 +459,7 @@ toggleGunConnection(peripheral) {
         var service = peripheral.advertising.serviceUUIDs[0];
         var RXCharacteristic = '9C3EEE6d-48FD-4080-97A8-240C02ADA5F5';
         BleManager.stopNotification(peripheral.id, service, RXCharacteristic).then((info) => {
-          console.log("Stop[ing notification");
+          console.log("Stopping notification");
           BleManager.disconnect(peripheral.id).then(() => {
             //console.log("disconnevting from ",peripheral.id);
             peripheral.connected = false;
@@ -472,7 +472,7 @@ toggleGunConnection(peripheral) {
         });
       }else{
         setTimeout(() =>{ 
-          console.log("Connection timed out");
+          console.log("Connection Attemtpt"); // Have some sort of checker to see if component is blured
           this.setState({connectLoad: false});
           if (this.state.connectedGun.connected == false){
             //console.log("No connected Gun",this.state.connectedGun);
@@ -628,6 +628,40 @@ toggleGunConnection(peripheral) {
         </View>
     );
   }
+  renderGameStatus() {
+    //var myGun = this.state.connectedGun;   
+    //if (myGun != null){
+    //const color = myGun.connected ? '#99ff99' : '#fff'; //Remind me to turn these to LinearGradient + scale feedback
+    //const iconName = myGun.connected ? 'link' : 'disconnect';
+    //let pService = myGun.advertising.serviceUUIDs[0]
+    //let serviceTag = pService.slice(-6);
+    //const gunName = myGun.name + ': ' + serviceTag;
+    let conGun = true; // Or default False
+    if (this.state.connectedGun != null || this.state.connectedGun != undefined){
+      if (this.state.connectedGun.connected){
+        conGun = true;
+      } else{
+        conGun = false
+      }
+    } else{
+      conGun = false;
+    }
+    //console.log("REndering GUn Status",conGun);
+    const statusColor = conGun? '#99ff99' : '#ffc1cc'; 
+    return(
+        <View style= {{backgroundColor: '#ae936c'}}>
+        <Text style={{
+            fontSize: 22,
+            margin: 1,
+            backgroundColor: statusColor,
+            textAlign: 'center'
+        }} onPress={() => alert("No.") }>
+            {conGun? 'Gun Connected' : 'Gun Disconnected'}
+        </Text>
+        </View>
+    );
+  }
+
 
   render() {
     //const list = Array.from(this.state.peripherals.values());
@@ -657,6 +691,12 @@ toggleGunConnection(peripheral) {
       return (
         <View>
         {this.renderGunStatus()}
+        </View>
+      )
+    }else if (this.props.screen == "Game"){
+      return (
+        <View>
+        {this.renderGameStatus()}
         </View>
       )
     }

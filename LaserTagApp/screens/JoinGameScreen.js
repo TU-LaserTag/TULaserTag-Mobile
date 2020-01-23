@@ -190,7 +190,7 @@ export default class JoinGameScreen extends Component {
             }
             if (request.status === 200) {
               response = JSON.parse(request.response);
-              console.log("Joining Game?",response)
+              //console.log("Joining Game?",response)
               this.handleJoinGame(response);
             } else {
               console.log("Error",request)
@@ -218,7 +218,7 @@ export default class JoinGameScreen extends Component {
       }
     
       handleJoinGame(response){
-        console.log("Joining Game",response);
+        console.log("Joining Game",response.game.name);
         const gameData = response
         this.props.navigation.navigate('Lobby',{userData:this.state.userData,gameData:gameData,gunData:this.state.gunData})
       }

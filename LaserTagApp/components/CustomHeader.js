@@ -39,9 +39,9 @@ export default class CustomHeader extends Component {
           onPress: () => console.log('Cancel Pressed'),
           style: 'cancel',
         },
-        {text: 'Yes', onPress: () => this.goHome()},
+        {text: 'Yes', onPress: () => this.props.leaveLobby()},
       ],
-      {cancelable: false},
+      {cancelable: true},
     );
   }
 
@@ -99,6 +99,14 @@ export default class CustomHeader extends Component {
     return (
       <Header>
       <Icon name='md-exit' type='ionicon' color='white' onPress={() => this.exitLobby()} />
+      <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
+      <Icon name='refresh' type='ionIcon' color='white' onPress={() => this.refresh()} />
+    </Header>
+    )
+  } else if (type == "game") {
+    return (
+      <Header>
+      <Icon name='md-exit' type='ionicon' color='white' onPress={() => this.exitGame()} />
       <Title><Text style= {{color: 'white'}}>{this.props.headerText}</Text></Title>
       <Icon name='refresh' type='ionIcon' color='white' onPress={() => this.refresh()} />
     </Header>
