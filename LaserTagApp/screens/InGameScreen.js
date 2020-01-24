@@ -164,7 +164,7 @@ export default class InGameScreen extends Component {
   
 
   requestGameInfo(){
-    const game_id = 29 //this.state.gameData.ga me.id;
+    const game_id = 28 //this.state.gameData.ga me.id;
     this.setState({loading: true,                
     })
     var getURL = Web_Urls.Host_Url + "/game/info/"+game_id // For somereason not returning evertyih
@@ -176,9 +176,9 @@ export default class InGameScreen extends Component {
         }
         if (request.status === 200) {
           gameInfo = JSON.parse(request.response);
-          console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
-          let  gameData = this.state.gameData;
-              gameData = gameInfo[0];
+          //console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
+          //let  gameData = this.state.gameData;
+             let gameData = gameInfo;
 
             if (gameData.style == 'solo'){ // If solo match
               const players = gameData.stats;
@@ -198,6 +198,7 @@ export default class InGameScreen extends Component {
               //Refreshes team data, Array gets un sorted however TODO: prevent array shuffling after naming a team
               const playerList = gameData.stats;
               const teamData = gameData.teams;
+              console.log("TeamData",teamData)
               this.setState({teamData,playerList});
             }
             //console.log("Setting state")
@@ -322,7 +323,7 @@ export default class InGameScreen extends Component {
         const teamData = gameData.teams;
         const numTeams = gameData.num_teams;
         if (teamData == null){
-          console.warn("No teams loaded yet");
+          console.log("No teams loaded yet");
           return( 
             <View>
                 <ActivityIndicator size="large" color="#61578b"

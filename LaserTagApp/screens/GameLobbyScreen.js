@@ -16,7 +16,7 @@ import { NavigationEvents } from 'react-navigation';
 import NumericInput from 'react-native-numeric-input'
 
 const dimensions = Dimensions.get('window');
-const Container_Width = Math.round(dimensions.width *1/3);
+const Container_Width = Math.round(dimensions.width *1/4);
 const Container_Height = Math.round(dimensions.height * 1/20);
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -73,7 +73,14 @@ export default class GameLobbyScreen extends Component {
       val: 1,
       gameLength: null,
       gameNameInput: null,
-      num_lives: null,
+      
+      today: new Date(),
+      gameDate: new Date(),
+
+      ammoInput: null,
+      cooldownInput: null,
+      timerInput: null,
+      livesInput: null,
 
 
     }
@@ -91,12 +98,17 @@ export default class GameLobbyScreen extends Component {
     const teamData = gameData.game.teams; // Teams are pre populated from previous assignments.....
     const gunData = this.props.navigation.getParam("gunData",null);
     const gameLength = this.props.navigation.getParam("game_length",null)
-    console.log("Got game Length",gameLength); // If null, make them set it
+   // console.log("Got game Length",gameLength); // If null, make them set it
     this.setState({userData,gameData,teamData,gameLength});;
+    //console.log("gameData",gameData)
     const myGunID = gameData.gun_id;
     const needName = gameData.needName;
     const myTeam = gameData.myTeam;
-    this.setState({myGunID,needName,myTeam});
+    const ammoInput = (gameData.game.maxammo <=0) ? 0: gameData.game.maxammo;
+    const livesInput = (gameData.game.maxLives <=0) ? 0: gameData.game.maxLives;
+    const cooldownInput = gameData.game.timedisabled;
+    //console.log("Setting",ammoInput,livesInput,cooldownInput,gameLength)
+    this.setState({myGunID,needName,myTeam,ammoInput,livesInput,cooldownInput});
     //const 
     //const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
     //const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
@@ -244,6 +256,17 @@ export default class GameLobbyScreen extends Component {
     //this.requestPlayerData(gameID)
   }
 
+  getTimeLimit = (currentTime) =>{ // TODO: ASK ABOUT TIME ZONE!!!
+    var minLim = 0;
+    curDate = new Date(currentTime);
+    var curHour = curDate.getHours();
+    var curMin = curDate.getMinutes();
+    var minutesUntil = ((23 - curHour) * 60) + (59 - curMin);
+    milisUntil = minutesUntil * 60 *1000;
+    minLim = currentTime + milisUntil
+    var predictedEnd = new Date(minLim)
+    return minutesUntil;
+  }
 
   getSelfStatsFromUsername(statsList,username){
     let myStats = null;
@@ -385,8 +408,10 @@ export default class GameLobbyScreen extends Component {
     const gameID = this.state.gameData.game.id;
     var gameLength = this.state.gameLength
     if (gameLength == null){
+      alert("Please set a game length")
       console.log("Set a gameLength");
-      gameLength = "15:00";
+      return;
+      gameLength = "00:15:00";
     }
     const countDown = 30; // 30 second countdown
     console.log("Starting match",gameLength,gameID,countDown);
@@ -804,7 +829,23 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
     )
   } 
   
-  
+  getFormatedTime = (minutes) => {// Add a time/format param that changes how string is formed?
+    var formattedHours= Math.floor(minutes/60);
+    var formattedMinutes = minutes %60;
+    var formatedSeconds = minutes*60 %60;
+    if (formattedHours < 10){
+      formattedHours = "0"+formattedHours;
+    }
+    if (formattedMinutes < 10){
+      formattedMinutes = "0"+formattedMinutes;
+    }
+    if (formatedSeconds < 10){
+      formatedSeconds = "0"+formatedSeconds;
+    }
+    const endTime = formattedHours + ":" +formattedMinutes + "." + formatedSeconds;
+    return endTime
+  }
+
   getTeamFromUsername = (username,teamList) =>{
     //teamList = this.state.teamData;
     //console.log("Set teamlist username",username)
@@ -824,7 +865,7 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
           for (var j = 0; j < playerList.length; j ++){
             let mplayer = playerList[j];
             pusername = mplayer.username;
-            console.log(mplayer,playerList)
+            //console.log(mplayer,playerList)
             if (pusername == undefined){
               console.log("pusername is undefined? - getTeam from Usernam")
              // pusername = mplayer.username
@@ -1105,7 +1146,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
             //console.log(" No team assinged to player");
             if (isRenderingTeamPlayer){
               teamInfo = this.getTeamFromUsername(username,teamList); // Grabs team data from username 
-              console.log("Got tem from username",teamInfo)
+              //console.log("Got tem from username",teamInfo)
             }else{
               teamInfo='none';
             }
@@ -1199,8 +1240,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                   <Text style={{ alignSelf: 'center', margin: 3, fontSize:15}}>{liveText} </Text>
                 </View>
                   <NumericInput 
-                    value={this.state.num_lives} 
-                    onChange={num_lives => this.setState({num_lives})} 
+                    value={this.state.livesInput} 
+                    onChange={livesInput => this.setState({livesInput})} 
                     onLimitReached={(isMax,msg) => console.log(isMax,msg)}
                     totalWidth={Container_Width} 
                     totalHeight={Container_Height} 
@@ -1214,7 +1255,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                     rightButtonBackgroundColor='#ae93Bf' 
                     leftButtonBackgroundColor='#ae939f'/>
                   <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-                    <Text style={{color: 'gray', marginLeft: 4, fontSize: 11}}>Lives per game{"\n"}(0 for infinite)</Text>
+                    <Text style={{color: 'gray', marginLeft: 4, fontSize: 11}}>(0 for infinite)</Text>
                   </View>
             </View>
           )
@@ -1224,11 +1265,11 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           return(
             <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
                  <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-                  <Text style={{ alignSelf: 'center', margin: 3, fontSize:22}}>{liveText} </Text>
+                  <Text style={{ alignSelf: 'center', margin: 3, fontSize:15}}>{liveText} </Text>
                 </View>
                   <NumericInput 
-                    value={this.state.timeDisabled} 
-                    onChange={timeDisabled => this.setState({timeDisabled})} 
+                    value={this.state.cooldownInput} 
+                    onChange={cooldownInput => this.setState({cooldownInput})} 
                     onLimitReached={(isMax,msg) => console.log(isMax,msg)}
                     totalWidth={Container_Width} 
                     totalHeight={Container_Height} 
@@ -1252,11 +1293,11 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           return (
                 <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
                 <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-                 <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:22}} >Ammo:</Text>
+                 <Text style={{justifyContent: 'center', alignSelf: 'center', margin: 3, fontSize:15}} >Ammo:</Text>
                </View>
                  <NumericInput 
-                   value={this.state.ammo} 
-                   onChange={ammo => this.setState({ammo})} 
+                   value={this.state.ammoInput} 
+                   onChange={ammoInput => this.setState({ammoInput})} 
                    onLimitReached={(isMax,msg) => console.log(isMax,msg)}
                    totalWidth={Container_Width} 
                    totalHeight={Container_Height} 
@@ -1270,7 +1311,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                    rightButtonBackgroundColor='#ae93Bf' 
                    leftButtonBackgroundColor='#ae939f'/>
                  <View style={{width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-          <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>Shots per game{"\n"}(0 for infinite)</Text>
+          <Text style={{color: 'gray', marginLeft: 4, fontSize: 10}}>(0 for infinite)</Text>
                    </View>
            </View>
             )
@@ -1289,8 +1330,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       
         renderGameLengthPicker = () => {
           const gameTime = this.state.gameDate.getTime();
-          var gameLength = this.state.game_length * 60 * 1000;
-          const potentialEnd = new Date(gameTime + gameLength);
+          var gameLength = this.state.gameLength * 60 * 1000;
+          //const potentialEnd = new Date(gameTime + gameLength);
           var newLengthLimit = '';
           if (this.state.lengthLimit == null){
             newLengthLimit = this.getTimeLimit(gameTime)
@@ -1298,11 +1339,11 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           return (
                 <View style = {{flex: 0.3, flexDirection: 'row', backgroundColor: '#EEEEEE', marginTop: 4}}>
                 <View style={{justifyContent: 'center', width: Container_Width, height: Container_Height /*Border? background color?*/}}>
-                 <Text style={{ alignSelf: 'center', margin: 3, fontSize:24}}>Timer:</Text>
+                 <Text style={{ alignSelf: 'center', margin: 3, fontSize:15}}>Timer:</Text>
                </View>
                  <NumericInput 
-                   value={this.state.game_length} 
-                   onChange={game_length => this.setState({game_length})} 
+                   value={this.state.gameLength} 
+                   onChange={gameLength => this.setState({gameLength})} 
                    onLimitReached={(isMax,msg) => console.log(isMax,msg)}
                    totalWidth={Container_Width} 
                    totalHeight={Container_Height} 
@@ -1414,6 +1455,12 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
 
           )
          }
+         let formattedGameLength ='';
+         if (this.state.gameLength == null){
+           formattedGameLength = this.getFormatedTime(this.state.gameLength);
+         }else{
+           formattedGameLength = "Not Set";
+         }
           return(
             <View>
                 <Card title={cardTitle} titleStyle= {{ fontSize: 20}}>
@@ -1441,8 +1488,13 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                       <Text style = {{fontSize: 18, fontWeight: 'bold'}}> {ammoText} </Text>
                     </View>
                   </View>
-              
-                <View style = {{alignItems: 'center'}}>
+
+                  <View style = {{alignItems: 'center'}}>
+                    <Text style ={{fontWeight: 'bold', fontSize: 18}}>Time Length:</Text>
+                    <Text style ={{fontWeight: '100', fontSize: 18}}>{formattedGameLength}</Text>
+                </View>
+
+                <View style = {{alignItems: 'center', marginTop: 5}}>
                 <Text style ={{fontWeight: 'bold', fontSize: 18}}>Players:</Text>
                 </View>
                 <Divider/>
