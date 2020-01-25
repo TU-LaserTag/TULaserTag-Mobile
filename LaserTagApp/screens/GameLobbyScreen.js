@@ -99,7 +99,7 @@ export default class GameLobbyScreen extends Component {
     const gameData = this.props.navigation.getParam("gameData", null);
     const teamData = gameData.game.teams; // Teams are pre populated from previous assignments.....
     const gunData = this.props.navigation.getParam("gunData",null);
-    const gameLength = this.props.navigation.getParam("game_length",null)
+    const gameLength = this.props.navigation.getParam("gameLength",null)
    // console.log("Got game Length",gameLength); // If null, make them set it
     this.setState({userData,gameData,teamData,gameLength});;
     //console.log("gameData",gameData)
@@ -466,7 +466,7 @@ export default class GameLobbyScreen extends Component {
   
     }
     gameLength = this.getFormatedTime(gameLength);
-    const countDown = 30; // 30 second countdown
+    const countDown = 10; // 30 second countdown
     console.log("Starting match",gameLength,gameID,countDown);
     
     this.requestReadyLock(gameLength,gameID,countDown);
@@ -860,7 +860,8 @@ export default class GameLobbyScreen extends Component {
   }
 
  requestReadyLock(gameLength,gameID,countDown){ // Can be array of players
-  this.setState({loading: true }); // Different loading types??
+  this.setState({loading: true,hostLoading: true }); // Different loading types??
+  
   const payload = {game_length: gameLength, id:gameID, secs_to_start:countDown};
   console.log("Start game payload",payload);
   const getURL = Web_Urls.Host_Url + "/readylock"
@@ -873,9 +874,10 @@ export default class GameLobbyScreen extends Component {
     if (request.status === 200) {
       lockResponse = JSON.parse(request.response);
       if (lockResponse.ok){
-        console.log("Success ready lock",lockResponse)
+        console.log("Success ready lock",lockResponse);
+        this.refreshAllData();
         // update TeamData to contain that state
-        this.setState({loading: false}); // Starting game = true? or wait until checkup is called;
+        this.setState({loading: false,hostLoading: false}); // Starting game = true? or wait until checkup is called;
       } else{
         console.log("REady lock failure",lockResponse);
         this.setState({loading: false});

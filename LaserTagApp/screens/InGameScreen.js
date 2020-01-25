@@ -9,6 +9,7 @@ import BluetoothManager from '../components/Ble_manager'
 import {Web_Urls} from '../constants/webUrls';
 import { Item } from 'native-base';
 import storage from '../Storage'
+import { startAsync } from 'expo/build/AR';
 
 const BleManagerModule = NativeModules.BleManager;
 const bleManagerEmitter = new NativeEventEmitter(BleManagerModule);
@@ -32,9 +33,13 @@ export default class InGameScreen extends Component {
       loggedIn: true,
       gameError: '',
       gameClock: null,
-      gameLength:  null
+      gameLength:  null,
+      gameOver: false,
+      endGameStats: null,
+      winners: null,
     }
-    
+    this.renderSoloLeaderBoard = this.renderSoloLeaderBoard.bind(this);
+
   }
   
   componentDidMount(){
@@ -71,11 +76,9 @@ export default class InGameScreen extends Component {
         return;
       }
       if (curClock <= 0){
-        alert("Game Finished");
-        // Call GameOver?
-        this.bleManager.sendMessage("f:")
-        clearInterval(this.gameClockLoop)
-        clearInterval(this.gameDataRefreshLoop);
+        const gameID = this.state.gameData.game.id;
+        this.requestGameOver(gameID);
+        
       
       }else{
         
@@ -152,14 +155,31 @@ export default class InGameScreen extends Component {
       }
     }
   }
+  pointsCompare(a, b) {
+    // Use toUpperCase() to ignore character casing
+    const pointsA = a.points;
+    const pointsB = b.points;
+  
+    let comparison = 0;
+    if (pointsA > pointsB) {
+      comparison = 1;
+    } else if (pointsA < pointsB) {
+      comparison = -1;
+    }
+    return comparison;
+  }
+  /** Sorts the rankings of the players */
+  sortRankStats(ranks){
+   const sortedRanks = ranks.sort(this.pointsCompare);
+    return sortedRanks;
+  }
 
-
-  getSecondsUntilEndTime(startTime,endTime){ // Easy to understand and not clever way to get seconds from a timestamp
-    console.log("Finding seconds until end time",endTime);
+  getSecondsUntilEndTime(startTime,endTime){ // Easy to understand and not clever way to get seconds from timestamps
+    //console.log("Finding seconds until end time",endTime); /** 15:29:73  why is this 73??*/
     startArray = startTime.split(":");
     endArray = endTime.split(":");
     // Do validation here??
-    console.log(startArray,endArray);
+    //console.log(startArray,endArray);
     var date = new Date();
     var startHours = Number(startArray[0])*3600;
     var startMinutes= Number(startArray[1]*60);
@@ -177,6 +197,40 @@ export default class InGameScreen extends Component {
     console.log("TIME",totaltime);
     return totaltime;
   }
+
+
+  getSecondsLeft(endTime){ // Easy to understand and not clever way to get seconds from a timestamp
+    //console.log("Finding seconds until end time",endTime);
+    var today = new Date();
+    var h = today.getHours();
+    var m = today.getMinutes();
+    var s = today.getSeconds();
+    var startArray = [h,m,s];
+    //console.log("CurrentTime",startArray);
+    //currentArray = currentTime.split(":");
+
+    endArray = endTime.split(":");
+    // Do validation here??
+    //console.log(startArray,endArray);
+    var date = new Date();
+    var startHours = Number(startArray[0]);
+    var startMinutes= Number(startArray[1]);
+    var startSeconds = Number(startArray[2])
+
+    var endHours = Number(endArray[0]);
+    var endMinutes= Number(endArray[1]);
+    var endSeconds = Number(endArray[2]);
+  
+    var totalHours = (endHours - startHours); 
+    var totalMinutes =endMinutes- startMinutes ;
+    var totalSeconds = endSeconds -startSeconds;
+
+    var totaltime = totalHours*3600 + totalMinutes *60 + totalSeconds;
+    //console.log("TIME",totaltime);
+    return totaltime;
+  }
+
+  
   getSecondsFromMinutes(minutes){ //? probably not necessary
     console.log("Finding seconds until end time",endTime);
     return minutes*60;
@@ -190,8 +244,30 @@ leaveGame = () =>{
 }
   keyExtractor = (item, index) =>index.toString()
 
+showGameOver = (gameOverData) =>{
+  alert("Game Finished");
+  console.log("GameoverData",gameOverData)
+  this.bleManager.sendMessage("f:")
+  clearInterval(this.gameClockLoop)
+  clearInterval(this.gameDataRefreshLoop);
+  this.setState({gameOver:true})
+}
+
   fireGun = () =>{
     console.log("pew pew");
+    this.bleManager.sendMessage("s:"+1) // Ammo lift
+    // Gather Needed info here first and pass it along
+    const gameData = this.state.gameData;
+    const gameMode = gameData.game.style;
+    const username = this.state.userData.username;
+    const gameID = gameData.game.id;
+    const timestamp = new Date().getTime(); /** todo:  ASK WHAt time format is needed */
+    const rounds_fired = 5; // Get Info from Gun...
+    this.requestFireGun(gameMode,username,gameID,timestamp,rounds_fired);
+  }
+  
+  gotHit = () =>{
+
   }
 
   isEmptyObject = (obj) => {
@@ -248,11 +324,12 @@ leaveGame = () =>{
              const gameInfo = gameData.game;
              const startTime = gameInfo.starttime;
              const endTime = gameInfo.endtime;
-             if (this.state.gameClock == null){
-               const secsTillEnd = this.getSecondsUntilEndTime(startTime,endTime);
-               console.log("Setting game clock",secsTillEnd);
-              this.setState({gameClock: secsTillEnd});
-             }
+             //if (this.state.gameClock == null){ /** Should It update every time? */
+               //const secsTillEnd = this.getSecondsUntilEndTime(startTime,endTime);
+               const timeLeft = this.getSecondsLeft(endTime);
+               //console.log("Setting game clock",timeLeft);
+              this.setState({gameClock: timeLeft});
+             //}
              //console.log("ZGame in",gameInfo.name)
             if (gameInfo.style == 'solo'){ // If solo match
               const players = gameInfo.stats;
@@ -304,9 +381,35 @@ leaveGame = () =>{
           //console.log("Got GameoverINfo:",gameInfo); // Gets strange on team game
           this.setState({loading: false, gameData: gameData});
           if (gameInfo.gameOver){
-            /** End Game */
-            console.warn("GAME OVER")
+            /** End Game */ // Gets called before local endtime is 0 ~25-30 seconds
+            console.log("GAME OVER");
+            this.setState({endGameStats: gameInfo.gameStats, winners: gameInfo.winners});
+            this.showGameOver(gameInfo);
           }
+        } else {
+          console.log("Erroe when Sdearching for game data",request)
+          this.setState({gameError: "Could not connect to server, Please try again later",
+                        loading: false});     
+        }
+      }
+      request.open('GET', getURL);
+      request.send();
+  }
+  requestFireGun(gameMode,username,gameID,timestamp,rounds_fired){
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/fire/"+gameMode+"/"+username+"/"+gameID+"/"+timestamp+"/"+rounds_fired; // For somereason not returning evertyih
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) { // Error 500, Cannot read property 'split' of null db.js:989:52 (when calling gameover on a game with no endTime)
+          gameInfo = JSON.parse(request.response);
+          console.log("Rounds fired recieved",gameInfo); // Gets strange on team game
+          this.setState({loading: false});
+          // Format and store hitDictionary to be loaded ad proper stats. also ask why solo game does not have kills array in stats...
         } else {
           console.log("Erroe when Sdearching for game data",request)
           this.setState({gameError: "Could not connect to server, Please try again later",
@@ -401,12 +504,41 @@ leaveGame = () =>{
       }
     }
     return (
-      <View style={{paddingTop:5}}>{teamItemList}</View>
+      <View key="teamRanking" style={{paddingTop:5}}>{teamItemList}</View>
+    )
+  }
+  renderSoloLeaderBoard = () =>{
+    const gameData = this.state.gameData.game;
+    //console.log("GameDataSolo",gameData)
+    ranks = gameData.stats;
+    sortedStats = this.sortRankStats(ranks)
+    //console.log("Sorted Stats",sortedStats);
+    //console.log("rendering",teamData);
+    var rankingList = [];
+    var rankPair = [];
+    for (i = 0; i < sortedStats.length; i ++){
+      const player = sortedStats[i];
+      let marginDir = (i%2 == 0) ? -2:2;
+      let name = player.player_username;
+      let color = player.team_color; // Make background white to get contrast of text?   
+      let points = player.points;                       
+      rankPair.push(<View key={"RankPair"+i} style={{borderWidth: 2,borderRadius: 5, marginHorizontal: 3, marginTop:marginDir, backgroundColor: color, justifyContent: 'center' }}><Text style={{fontWeight: 'bold', }}>{name}</Text><Divider></Divider><Text style = {{ fontWeight:'200', alignSelf: 'center'}}>{points}</Text></View>);
+      if (marginDir == 2){
+        rankingList.push(<View key={i} style= {{flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10}}>{rankPair}</View>);
+        rankPair = [];
+      }
+      if (sortedStats.length == 1){
+        rankingList.push(<View key={i} style= {{flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 10}}>{rankPair}</View>);
+      }
+    }
+    return (
+      <View key="rankingList" style={{paddingTop:5}}>{rankingList}</View>
     )
   }
 
 
   renderTeamHeaders(gameData) {
+    //console.log("REnderingteam Headers",gameData);
     if (gameData == null || this.isEmptyObject(gameData)){
       return( 
         <View>
@@ -419,8 +551,17 @@ leaveGame = () =>{
         </View>
       )
     } else {
+      const flatListData = [{id: 0, name:"GameData", key: 1}];
       if (gameData.style == 'solo'){ // Place Leaderboard herec // {this.renderLeaderboard(gameData)}
-        return <View><Text>LeaderBoard:</Text></View>
+      //console.log("Rendering solo lB",gameData)
+        return (<FlatList
+          listKey = "LeaderBoard"
+          keyExtractor={this.DataKeyExtractor}
+          data={flatListData}
+          renderItem={this.renderSoloLeaderBoard}
+          extraData={this.state}
+        />
+        )
       } else{
         const teamData = gameData.teams;
         const numTeams = gameData.num_teams;
@@ -510,17 +651,19 @@ leaveGame = () =>{
           <View style={{flexDirection: 'row', marginTop: -5, justifyContent: 'space-around', borderTopColor: "#FFFFFF", borderWidth: 1, borderRadius: 10, borderTopLeftRadius:0, borderTopRightRadius:0, borderBottomColor: "#EEEEEE", borderRightColor: "#EEEEEE", borderLeftColor: "#EEEEEE"}}><Text style={{fontSize: 15, fontWeight: '300'}}>Points</Text><Text style={{fontSize: 15, fontWeight: '300'}}>Kills</Text></View>
           <View style={{flexDirection: 'row', justifyContent: 'space-around',paddingTop: 5, margin: 5}}><View style={{flexDirection: 'row'}}><Icon color= 'red' name="heart" type="feather" size={40}></Icon><Text style={{fontSize: 35, fontWeight: 'bold'}}> {lives}</Text></View><View style={{flexDirection: 'row'}}><Icon name = 'ammunition' size = {35}  color= "black"  type = 'material-community'/><Text style={{fontSize: 35, fontWeight: 'bold'}}> {ammo}</Text></View></View>
         </Card>
-          {this.renderKillFeed(myStats)}
+          {this.renderKillFeed(gameData)}
         </View>
       )
     }
   }
 
-  renderKillFeed(myStats){ // REnders kills a player may have
+  renderKillFeed(gameData){ // REnders kills a player may have
     //console.log("AllStats",gameData.stats); /** TODO: Get a better way to render this data list... new API request? */
-    return (<View></View>);;
+    //return (<View></View>);;
+    //killed":[{"id":4,"player_username":"Dr. You","killer_stats_id":12}]}
+    const myStats = gameData.game.stats;
+    //console.log("myStats",gameData);
 
-    //console.log("myStats",myStats,gameStats)
     if (myStats == null){
       return(
         <Card title="Loading Kill Feed" containerStyle={{borderWidth:1,}}>
@@ -533,7 +676,13 @@ leaveGame = () =>{
           </Card>
       )
     } else{
-      const kills = myStats.killed;
+      let kills = [];
+      if (gameData.game.style == 'solo'){
+        kills = [] /** ASK how to get kill stats  populagte after calling fire? */
+      } else{
+        kills = myStats.killed;
+      }
+
       //console.log("Kills",kills)
       if (kills.length == 0){
         return (
@@ -613,6 +762,66 @@ leaveGame = () =>{
     }
   }
 
+  renderWinner = ({item}) =>{
+    console.log("Renderin gwinere",item)
+    // Get Info on winner depending on team or username
+    return( /** Or just have the same thing from leaderrboard */
+    <ListItem
+          style= {{borderColor: "black", borderWidth: 1}}
+          key = {item}
+          title={item}
+          titleStyle = {{fontSize: 14,color: 'black'}}
+          containerStyle = {{
+            backgroundColor: "#EEEEEE"
+          }}
+         subtitle="Winner" // Chage?
+          subtitleStyle = {{
+            fontSize: 9,
+            color: "black"
+            
+          }}
+          leftIcon={{ name: "user", type: 'feather', color: 'black'} /*Could be Avatar as well? or team/League indicator */}
+        />
+    )
+  }
+
+  renderGameWinners = (gameWinners) =>{ /** If it is team game, show teams and players?? solo, show playername */
+    if (this.state.gameData.game.style == 'solo'){
+      console.log("Renderiing winners",gameWinners);
+      return (
+          <FlatList
+          listKey = "main"
+          keyExtractor={this.DataKeyExtractor}
+          data={gameWinners}
+          renderItem={this.renderWinner}
+          extraData={this.state}
+    />
+      )
+    } else{
+      return(
+        <View></View>
+      )
+    }
+    
+  }
+  renderEndGame = () => { /* Loads Game over data from state and yet*/
+    const gameOver = this.state.gameOver;
+    if (gameOver){
+      const gameStats = this.state.endGameStats;
+      const gameWinners = this.state.winners;
+      console.log("Gameover visible",gameOver)
+      return (
+        <Overlay isVisible = {gameOver}>
+          <View style={{ justifyContent: 'center', alignItems: 'center', flex: 5, padding: 1, backgroundColor: '#212021'}}>
+              <Text style={{fontSize: 32, color: 'white'}}>Game Over</Text>
+              <Text>Winners:</Text>
+              {this.renderGameWinners(gameWinners)}
+            </View>
+         </Overlay>
+      )
+    }
+
+  }
   DataKeyExtractor = (item, index) => index.toString()
   render() {
     flatListData = [{id: 0, name:"GameData", key: 1}];
@@ -635,9 +844,11 @@ leaveGame = () =>{
       <ThemeProvider {...this.props}  theme={LaserTheme}>
         <CustomHeader {...this.props} refresh = {this.refresh} leaveGame = {this.leaveGame} headerText= "Match" headerType = "game" />
         <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Game"></BluetoothManager>
+        {this.renderEndGame()}
         {this.rendergameTimer(gameTime)}
         {this.renderGameHeader(gameData)}
         {this.renderTeamHeaders(gameData)}
+       
         <FlatList
           listKey = "main"
           keyExtractor={this.DataKeyExtractor}
