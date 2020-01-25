@@ -24,14 +24,15 @@ export default class InGameScreen extends Component {
     super()
     this.state = {
       loading: false,
-      userData: {},
+      userData: null,
       gunData: {},
       gameData: {},
       teamData: {},
       playerList: null,
       loggedIn: true,
       gameError: '',
-      gameClock: 3600,
+      gameClock: null,
+      gameLength:  null
     }
     
   }
@@ -41,9 +42,10 @@ export default class InGameScreen extends Component {
     const userData = this.props.navigation.getParam("userData", null);
     const gunData = this.props.navigation.getParam("gunData", null);
     const gameData = this.props.navigation.getParam("gameData", null);
+    const gameLength = this.props.navigation.getParam("gameLength", null);
 
-    console.log("Got data:",userData,gunData,gameData)
-    this.setState({userData, gunData,gameData});
+    //console.log("Got data:",userData,gunData,gameData)
+    this.setState({userData, gunData,gameData,gameLength});
     if (gameData == null){
       console.log("No Game Data");
       // How to get game ID?  
@@ -55,30 +57,50 @@ export default class InGameScreen extends Component {
     }
 
     // Set refreshInterval interval
-    
+    if (gameLength != null){
+      console.log('gameLength',gameLength);
+      // Convert from here?
+      // set gamelentgh
+    }
     this.refresh();
 
     // Start gameClock
     this.gameClockLoop = setInterval(()=> { // Dont forget to destroy (clearintercal)
       const curClock = this.state.gameClock;
-      if (curClock === 0){
+      if (curClock == null){
+        return;
+      }
+      if (curClock <= 0){
         alert("Game Finished");
-        // Send message to gun 
+        // Call GameOver?
+        this.bleManager.sendMessage("f:")
         clearInterval(this.gameClockLoop)
+        clearInterval(this.gameDataRefreshLoop);
+      
       }else{
+        
         this.setState({gameClock: curClock -1});
       }
 
     }, 1000);
+
+    this.gameDataRefreshLoop = setInterval(()=> { // Dont forget to destroy (clearintercal)
+        //this.bleManager.sendMessage("f:")
+      this.refresh();
+
+    }, 5000);
   } 
 
   componentWillUnmount() { // cancel all async tasks herere? Appstate change?
     console.log("unmouting inGame ");
-    clearInterval(this.gameClockLoop)
+    clearInterval(this.gameClockLoop);
+    clearInterval(this.gameDataRefreshLoop);
   }
 
-    // * Helpers*----- ***//
-    loadStorage = () => {
+  // * Helpers*--------######-- ***//
+
+
+  loadStorage = () => {
       global.storage.load ({
       key: 'userData',
       autoSync: true,
@@ -107,18 +129,65 @@ export default class InGameScreen extends Component {
     }
   });
   }
-  refresh = () =>{
-    console.log("Refreshing");
+
+
+
+
+  refresh(){
+    const gameData = this.state.gameData;
+    //console.log("Refreshing",gameData);
     // Things needed to check
     /**Gameover
      * game/info
      * hits?
      * fire?
      */
-    this.requestGameInfo(); // Stores game data into gameData
-    this.requestGameOver();
+    if (this.isEmptyObject(gameData)){
+      console.log("May have error getting data");
+    } else{
+      const gameID = this.state.gameData.game.id;
+      this.requestGameInfo(gameID); // Stores game data into gameData
+      if (this.state.userData != null){
+        this.requestGameOver(gameID);
+      }
+    }
   }
 
+
+  getSecondsUntilEndTime(startTime,endTime){ // Easy to understand and not clever way to get seconds from a timestamp
+    console.log("Finding seconds until end time",endTime);
+    startArray = startTime.split(":");
+    endArray = endTime.split(":");
+    // Do validation here??
+    console.log(startArray,endArray);
+    var date = new Date();
+    var startHours = Number(startArray[0])*3600;
+    var startMinutes= Number(startArray[1]*60);
+    var startSeconds = Number(startArray[2])
+
+    var endHours = Number(endArray[0])*3600;
+    var endMinutes= Number(endArray[1]*60);
+    var endSeconds = Number(endArray[2]);
+
+    var totalHours = endHours - startHours;
+    var totalMinutes =endMinutes- startMinutes ;
+    var totalSeconds = endSeconds -startSeconds;
+
+    var totaltime = totalHours*3600 + totalMinutes *60 + totalSeconds;
+    console.log("TIME",totaltime);
+    return totaltime;
+  }
+  getSecondsFromMinutes(minutes){ //? probably not necessary
+    console.log("Finding seconds until end time",endTime);
+    return minutes*60;
+  }
+
+leaveGame = () =>{
+  const username = this.state.userData.username;
+  const gameID = this.state.gameData.game.id;
+  console.log("Leaving Game",username,gameID);
+  this.requestLeaveGame(username,gameID);
+}
   keyExtractor = (item, index) =>index.toString()
 
   fireGun = () =>{
@@ -131,12 +200,12 @@ export default class InGameScreen extends Component {
   getSelfStatsFromUsername(statsList,username){
       //teamList = this.state.teamData;
       //console.log("Set teamlist username",username)
-      myStats = null;
+      myStats = 0;
       if (statsList == null || statsList == undefined || statsList.length == 0){
         console.log("No Stats")
         return null;
       } else{
-        if (statsList.length == 0){ // No teams have been created/assigned to game yet
+        if (statsList.length == 0){ // No stats created/assigned to game yet
           console.log("No Stats");
           return null;
         } else{
@@ -154,8 +223,7 @@ export default class InGameScreen extends Component {
         }
         
       }
-      //console.log("Retrurning myTEam",myTeam)
-    return myTeam;
+    return myStats;
   }
   /********* ------ */
 
@@ -163,11 +231,10 @@ export default class InGameScreen extends Component {
 // GET
   
 
-  requestGameInfo(){
-    const game_id = 28 //this.state.gameData.ga me.id;
+  requestGameInfo(gameID){
     this.setState({loading: true,                
     })
-    var getURL = Web_Urls.Host_Url + "/game/info/"+game_id // For somereason not returning evertyih
+    var getURL = Web_Urls.Host_Url + "/game/info/"+gameID // For somereason not returning evertyih
     console.log("Sending request to ",getURL)
     var request = new XMLHttpRequest();
       request.onreadystatechange = (e) => {
@@ -175,13 +242,20 @@ export default class InGameScreen extends Component {
           return;
         }
         if (request.status === 200) {
-          gameInfo = JSON.parse(request.response);
+          const gameData = JSON.parse(request.response);
           //console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
-          //let  gameData = this.state.gameData;
-             let gameData = gameInfo;
-
-            if (gameData.style == 'solo'){ // If solo match
-              const players = gameData.stats;
+           
+             const gameInfo = gameData.game;
+             const startTime = gameInfo.starttime;
+             const endTime = gameInfo.endtime;
+             if (this.state.gameClock == null){
+               const secsTillEnd = this.getSecondsUntilEndTime(startTime,endTime);
+               console.log("Setting game clock",secsTillEnd);
+              this.setState({gameClock: secsTillEnd});
+             }
+             //console.log("ZGame in",gameInfo.name)
+            if (gameInfo.style == 'solo'){ // If solo match
+              const players = gameInfo.stats;
               var isInlist = players.find(player => {
                 return player.player_username === this.state.userData.username;
               })
@@ -193,12 +267,12 @@ export default class InGameScreen extends Component {
                 console.warn("You have been removed from this match");
                 this.setState({loggedIn: false});
               }  
-              this.setState({loading: false, gameData: gameData});
+              this.setState({loading: false, gameData});
             } else{
               //Refreshes team data, Array gets un sorted however TODO: prevent array shuffling after naming a team
-              const playerList = gameData.stats;
-              const teamData = gameData.teams;
-              console.log("TeamData",teamData)
+              const playerList = gameInfo.stats;
+              const teamData = gameInfo.teams;
+              //console.log("TeamData",teamData)
               this.setState({teamData,playerList});
             }
             //console.log("Setting state")
@@ -214,11 +288,11 @@ export default class InGameScreen extends Component {
       request.send();
   }
   
-  requestGameOver(){
-    const game_id = 29 //this.state.gameData.game.id;
+  requestGameOver(gameID){
+    const username = this.state.userData.username;
     this.setState({loading: true,                
     })
-    var getURL = Web_Urls.Host_Url + "/game/game/"+game_id // For somereason not returning evertyih
+    var getURL = Web_Urls.Host_Url + "/gameover/"+username+"/"+gameID // For somereason not returning evertyih
     console.log("Sending request to ",getURL)
     var request = new XMLHttpRequest();
       request.onreadystatechange = (e) => {
@@ -227,9 +301,12 @@ export default class InGameScreen extends Component {
         }
         if (request.status === 200) { // Error 500, Cannot read property 'split' of null db.js:989:52 (when calling gameover on a game with no endTime)
           gameInfo = JSON.parse(request.response);
-          console.log("Got GameoverINfo:",gameInfo); // Gets strange on team game
+          //console.log("Got GameoverINfo:",gameInfo); // Gets strange on team game
           this.setState({loading: false, gameData: gameData});
-          
+          if (gameInfo.gameOver){
+            /** End Game */
+            console.warn("GAME OVER")
+          }
         } else {
           console.log("Erroe when Sdearching for game data",request)
           this.setState({gameError: "Could not connect to server, Please try again later",
@@ -240,7 +317,32 @@ export default class InGameScreen extends Component {
       request.send();
   }
 
-
+  requestLeaveGame(username,gameID) { // Remove player from lobby
+    this.setState({loading: true,                
+    })
+    var getURL = Web_Urls.Host_Url + "/player/game/"+username+"/"+gameID;
+    console.log("Sending request to ",getURL)
+    var request = new XMLHttpRequest();
+      request.onreadystatechange = (e) => {
+        if (request.readyState !== 4) {
+          return;
+        }
+        if (request.status === 200) {
+          response = JSON.parse(request.response);
+          console.log("Deleted from Game",response);
+          // Perform state changing stuff here  or in thing abobe
+          this.setState({loading: false}) // Delete loading
+          this.props.navigation.goBack()
+        } else {
+          console.log("Error when Leaving lobby",request);
+          alert("Something went wrong Leaving lobby");
+          this.setState({gameError: "Could not connect to server, Please try again later",
+                        loading: false});     
+        }
+      }
+      request.open('DELETE', getURL);
+      request.send();
+  }
 /*******---------**** */
       
     
@@ -248,24 +350,24 @@ export default class InGameScreen extends Component {
 
 /** Rendering functions ------ */
   renderGameHeader(gameData){
-    console.log("Rendewring Data",gameData)
-    if (gameData == null){
-      console.log("no dagta")
-    }else{
+    //console.log("rendering HEADER",gameData);
+    
       return(
         <View  titleStyle= {{ fontSize: 20}} style={{ alignItems: 'center', backgroundColor:'white', borderTopColor: 'white'}}>
               <Text style ={{fontSize: 25, fontWeight: 'bold'}}>{gameData.name} </Text>
         </View>
       );
-    }
+    
   }
 
 
-  rendergameTimer(gameData){
-    const gameTime = this.state.gameClock;
-    var formattedHours= Math.floor(gameTime/60/60);
-    var formattedMinutes = Math.floor(gameTime/60) %60;
-    var formatedSeconds = gameTime %60
+  rendergameTimer(gameTime){
+    // Format gameTIme?
+    const clientTime = this.state.gameClock;
+
+    var formattedHours= Math.floor(clientTime/60/60);
+    var formattedMinutes = Math.floor(clientTime/60) %60;
+    var formatedSeconds = clientTime %60
     if (formattedHours < 10){
       formattedHours = "0"+formattedHours;
     }
@@ -352,9 +454,22 @@ export default class InGameScreen extends Component {
     }
   }
   renderSelfStats(gameData){
-    //console.log("AllStats",gameData.stats);
-    const gameStats = gameData.stats;
-    const myStats = this.getSelfStatsFromUsername(gameStats,this.state.userData.username);
+    var  gameStats = gameData.stats;
+    //console.log("AllStats",gameData.game);
+    if (gameData.game == undefined || gameData.game == null){
+      console.log("No Stats Defined yet")
+    } else{
+      gameStats = gameData.game.stats;
+    }
+    
+    const userData = this.state.userData;
+    let myStats = null;
+    if (userData == null){
+      console.log("User Data null")
+    }else{
+      //console.log("Getting stats",gameStats,this.state.userData)
+      myStats = this.getSelfStatsFromUsername(gameStats,this.state.userData.username);
+    }
     //console.log("myStats",myStats,gameStats)
     if (myStats == null){
       return(
@@ -366,16 +481,27 @@ export default class InGameScreen extends Component {
                   alignContent: 'center'
               }} />
           </Card>
-      )
+      )}
+      else if (myStats == 0){
+        //console.log("youre not in this game");
+        return(
+          <Card title="Error Loading Your data" containerStyle={{borderWidth:1, borderColor: 'red'}}>
+              
+            </Card>
+        )
     } else{
+      
       //console.log("Rendering stats",myStats);
+      var numKills = 0;
+      if (gameData.style == 'team'){
+         numKills = myStats.killed.length;
+      }
       const username = myStats.player_username;
-      const numKills = myStats.killed.length;
-      const lives = myStats.remaining_lives; // If -1, infinite symbol (lives)
-      const color = myStats.team_color;
+      const lives = (myStats.remaining_lives == -1) ? '∞' :myStats.remaining_lives;
+      const color = myStats.team_color; // Can get iffy... use individual Color?
       const points = myStats.points;
-      const ammoCap = gameData.maxammo; // If -1: infinite
-      const ammo = (ammoCap == -1) ? '∞' : ammoCap - myStats.rounds_fired;
+      const ammoCap = gameData.game.maxammo; // If -1: infinite
+      const ammo = (ammoCap <= 0) ? '∞' : (ammoCap - myStats.rounds_fired);
       // Add dynamic color based on lives/points/ammo
       return(
         <View>
@@ -391,8 +517,8 @@ export default class InGameScreen extends Component {
   }
 
   renderKillFeed(myStats){ // REnders kills a player may have
-    //console.log("AllStats",gameData.stats);
-    
+    //console.log("AllStats",gameData.stats); /** TODO: Get a better way to render this data list... new API request? */
+    return (<View></View>);;
 
     //console.log("myStats",myStats,gameStats)
     if (myStats == null){
@@ -408,7 +534,7 @@ export default class InGameScreen extends Component {
       )
     } else{
       const kills = myStats.killed;
-      console.log("Kills",kills)
+      //console.log("Kills",kills)
       if (kills.length == 0){
         return (
           <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
@@ -490,12 +616,26 @@ export default class InGameScreen extends Component {
   DataKeyExtractor = (item, index) => index.toString()
   render() {
     flatListData = [{id: 0, name:"GameData", key: 1}];
-    gameData = this.state.gameData;
+    //console.log("Initial game Data",this.state.gameData);
+    var gameData = this.state.gameData;
+    var gameTime = null;
+    if (gameData == null || this.isEmptyObject(gameData)){
+        console.log("Game Data EMPTY",)
+        gameData = {};
+    } else{
+      //console.log("SETTIng game Data");
+      gameTime = gameData.time;
+      gameData = gameData.game;
+    }
+    if (gameTime == null){
+      //console.log("No time");
+      gameTime = "not Set";
+    }
     return(
       <ThemeProvider {...this.props}  theme={LaserTheme}>
-        <CustomHeader {...this.props} refresh = {this.refresh} headerText= "Match" headerType = "game" />
-        <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Game"></BluetoothManager>
-        {this.rendergameTimer(gameData)}
+        <CustomHeader {...this.props} refresh = {this.refresh} leaveGame = {this.leaveGame} headerText= "Match" headerType = "game" />
+        <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Game"></BluetoothManager>
+        {this.rendergameTimer(gameTime)}
         {this.renderGameHeader(gameData)}
         {this.renderTeamHeaders(gameData)}
         <FlatList

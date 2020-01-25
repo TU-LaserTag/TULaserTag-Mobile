@@ -39,6 +39,7 @@ export default class BluetoothManager extends Component {
       foundMatch: false,
       connectLoad:false,
       searchLoad: false,
+      userData: null,
     }
     //console.log("construct");
     
@@ -97,6 +98,32 @@ export default class BluetoothManager extends Component {
       this.checkGunConnection();
     } else{
     }
+  })
+  .catch(err => {
+    // any exception including data not found
+    // goes to catch()
+    console.log(err.message);
+    switch (err.name) {
+      case 'NotFoundError':
+        return false;
+      case 'ExpiredError': // Gun only lasts for so long
+        return false;
+    }
+  });
+  /** User Data */
+  global.storage.load ({
+    key: 'userData',
+    autoSync: true,
+    syncInBackground: true,
+    syncParams: {
+      extraFetchOptions: {
+        // blahblah
+      },
+      someFlag: true
+    }
+  })
+  .then(userData => {
+    this.setState({userData})
   })
   .catch(err => {
     // any exception including data not found
@@ -494,6 +521,7 @@ export default class BluetoothManager extends Component {
                 //bleManagerEmitter.addListener('BleManagerDidUpdateValueForCharacteristic',({ value, peripheral, characteristic, service }) => {
                 //  console.log("haha",value);  
                 //});
+                setTimeout(() =>{this.sendMessage("U:"+this.state.userData.username)},500)
                 this.setState({connectLoad: false});
               }).catch((error) => {
                 console.warn("Notification error",error);

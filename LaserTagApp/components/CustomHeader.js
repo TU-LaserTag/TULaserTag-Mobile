@@ -45,6 +45,22 @@ export default class CustomHeader extends Component {
     );
   }
 
+  exitGame = () =>{
+    Alert.alert(
+      'Exit Game',
+      'Are you sure you want to exit this game?',
+      [
+        {
+          text: 'No',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel',
+        },
+        {text: 'Yes', onPress: () => this.props.leaveGame()},
+      ],
+      {cancelable: true},
+    );
+  }
+
   getHeader = () => { 
     const type = this.props.headerType
     if (type == "login"){

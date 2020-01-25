@@ -56,7 +56,7 @@ export default class GunScreen extends Component {
       <ThemeProvider theme={LaserTheme}>
         <CustomHeader {...this.props} headerText = "Connect to Gun" headerType = "gun"/>
         <ThemeProvider theme={LaserTheme}>
-        <BluetoothManager {...this.props} getGunData = {this.getGunData} screen= "Gun"></BluetoothManager>
+        <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Gun"></BluetoothManager>
         
         
         </ThemeProvider>

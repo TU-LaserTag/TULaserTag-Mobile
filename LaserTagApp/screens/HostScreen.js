@@ -513,13 +513,15 @@ export default class HostScreen extends Component {
       // Put Toast?
       return false;
     }
-    newTeaminfo = {name: selectedTeam.name, color:selectedTeam.color, team_id: selectedTeam.id}
+    newTeaminfo = {name: selectedTeam.name, color:selectedTeam.color, team_id: selectedTeam.team_id, color_name: selectedTeam.color_name}
     // Setting eeach one individually since bulk seting does not seem to work
     teamList[itemIndex].name = newTeaminfo.name;
     teamList[itemIndex].color = newTeaminfo.color;
     teamList[itemIndex].team_id = newTeaminfo.team_id;
-
+    teamList[itemIndex].color_name = newTeaminfo.color_name;
+    teamList[itemIndex] = newTeaminfo;
     this.setState({teamList: teamList});
+    console.log("TeamList",teamList)
   }
 
   renderTeamPicker = (index,item) => {

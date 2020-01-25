@@ -14,6 +14,7 @@ import { ColorPicker, TriangleColorPicker, fromHsv } from 'react-native-color-pi
 import BluetoothManager from '../components/Ble_manager';
 import { NavigationEvents } from 'react-navigation';
 import NumericInput from 'react-native-numeric-input'
+import CountdownCircle from 'react-native-countdown-circle'
 
 const dimensions = Dimensions.get('window');
 const Container_Width = Math.round(dimensions.width *1/4);
@@ -68,9 +69,8 @@ export default class GameLobbyScreen extends Component {
       availibleTeams: [],
       setColor: 'gray',
       curColor: 'green',
-      hue: 0,
-      sat: 0,
-      val: 1,
+      isLocked: false,
+      startCountdown: null,
       gameLength: null,
       gameNameInput: null,
       
@@ -81,6 +81,8 @@ export default class GameLobbyScreen extends Component {
       cooldownInput: null,
       timerInput: null,
       livesInput: null,
+      num_teamInput: null,
+      gameLengthInput: 15
 
 
     }
@@ -107,8 +109,10 @@ export default class GameLobbyScreen extends Component {
     const ammoInput = (gameData.game.maxammo <=0) ? 0: gameData.game.maxammo;
     const livesInput = (gameData.game.maxLives <=0) ? 0: gameData.game.maxLives;
     const cooldownInput = gameData.game.timedisabled;
+    const num_teamInput = gameData.game.num_teams;
+    const gameNameInput = gameData.game.name
     //console.log("Setting",ammoInput,livesInput,cooldownInput,gameLength)
-    this.setState({myGunID,needName,myTeam,ammoInput,livesInput,cooldownInput});
+    this.setState({myGunID,needName,myTeam,ammoInput,gameNameInput, livesInput,cooldownInput,num_teamInput});
     //const 
     //const dummyGameData = {"id":10,"starttime":null,"endtime":null,"maxammo":-1,"style":"team","timedisabled":30,"maxLives":5,"pause":false,"winners":null,"date":"01-16-2020","code":"","num_teams":2,"players_alive":null,"team_selection":"manual","teams_alive":null,"locked":false,"name":"Rock the house","host":"Canthony"}
     //const dummyTeamData = [{"id":8,"name":"New Team 21","color":"#12543F","league_id":null,"players":[/*{"id":3,"username":"Thirty Thousand Leagues","password":"12345"},{"id":6,"username":"Green Machine","password":"RedIsDead"}*/]},{"id":13,"name":"Coherent Light","color":"#3E47AE","league_id":null,"players":[/*{"id":4,"username":"Nurkbook","password":"Ecuador"},{"id":5,"username":"Dr. You","password":"Me&You"}*/]}]
@@ -177,7 +181,7 @@ export default class GameLobbyScreen extends Component {
         //console.log(this.state.teamData,this.state.playerList)
       }
     
-    }, 15000);
+    }, 10000);
     //console.log("Loading data",gameData,userData,teamData);
     //this.requestGameData(gameData.id); // Maybe move to constructor?
     if (gunData == null){
@@ -230,16 +234,15 @@ export default class GameLobbyScreen extends Component {
   };
 
   getGunData = (gunData) =>{
-    //console.log("Recieved GunData",gunData);
+    //console.log("Recieved GunData",this.state.gameData);
     this.setState({gunData});
     /** if gun is conected,,, verification/validation */
     if (gunData.connected){
       if (this.state.myGunID != null){
         /* Wait a bit and then send the gun ID to tgun */
-        setTimeout(() =>{this.bleManager.sendMessage("G:"+this.state.myGunID)},500)
-        
+        this.setGunID(this.state.myGunID);
       } else{
-        console.warn("Did not recieve Gun ID");
+        console.log("Did not recieve Gun ID");
       }
     } else{
       console.warn("Gun not connected");
@@ -247,13 +250,26 @@ export default class GameLobbyScreen extends Component {
     
   } 
 
+ setGunID(gunID){
+  setTimeout(() =>{this.bleManager.sendMessage("G:"+gunID)},500) // Remove Delay?
+ }
 
   refreshAllData(){
     const gameID = this.state.gameData.game.id;
     const username = this.state.userData.username;
     this.requestGameData(gameID,username)
-    //this.requestTeamData(gameID)
-    //this.requestPlayerData(gameID)
+    /** also grabs the gun Id out of stats and sets it */
+    if (this.state.myGunID == null){
+      stats = this.getSelfStatsFromUsername(this.state.gameData.game.stats,username);
+      if ( stats == null || stats == undefined || stats == 0){
+        return;
+      }
+      gunID =  stats.gun_id;
+      this.setGunID(gunID);
+      this.setState({myGunID: gunID});
+      //this.requestTeamData(gameID)
+      //this.requestPlayerData(gameID)
+    }
   }
 
   getTimeLimit = (currentTime) =>{ // TODO: ASK ABOUT TIME ZONE!!!
@@ -271,11 +287,11 @@ export default class GameLobbyScreen extends Component {
   getSelfStatsFromUsername(statsList,username){
     let myStats = null;
     if (statsList == null || statsList == undefined || statsList.length == 0){
-      console.log("No Stats")
+      //console.log("No Stats")
       return null;
     } else{
       if (statsList.length == 0){ // No teams have been created/assigned to game yet
-        console.log("No Stats");
+        //console.log("No Stats");
         return null;
       } else{
         for (var i = 0; i < statsList.length; i++){
@@ -304,7 +320,6 @@ export default class GameLobbyScreen extends Component {
       //this.setState({gameError: true});
       return false;
     } else{
-      
       return true;
     }
 
@@ -313,6 +328,7 @@ export default class GameLobbyScreen extends Component {
   checkOnTeam(username){ // checks if a player has a team or not
     const gameData = this.state.gameData;
     const teams = gameData.game.teams;
+    console.log("Teams",gameData,teams)
     const numAssigned = this.countTeamsAssigned(username,teams);
     if (numAssigned >= 1){
       return true;
@@ -353,7 +369,7 @@ export default class GameLobbyScreen extends Component {
           alert("Please input a team name (permanent)");
           return
         }
-        console.log("Sending request to edit team",team.name,this.state.teamNameInput);
+        //console.log("Sending request to edit team",team.name,this.state.teamNameInput);
         this.requestPatchTeam(team,this.state.teamNameInput);
         teamData = this.state.teamData;
         var oldTeam = teamData[0]; // Replace with get index of edited team
@@ -374,11 +390,45 @@ export default class GameLobbyScreen extends Component {
   }
 
   editGame = (gameData) =>{
-    const gameNameInput = this.state.gameData.game.name;
-    console.log("Editing game",gameNameInput);
+    //console.log("editing",gameData)
+    const gameStyle = gameData.style;
+    const gameNameInput = this.state.gameNameInput;
+    var livesInput = this.state.livesInput;
+    var ammoInput = this.state.ammoInput;
+    const cooldownInput = this.state.cooldownInput;
+    const gameLengthInput = this.state.gameLengthInput;
+    const gameDate = gameData.date;
+    const gameCode = gameData.code;
+    const numTeamInput = this.state.num_teamInput
+    const team_selection = gameData.team_selection;
+    const hostName = gameData.host;
+    
 
+    if (ammoInput == 0){
+      ammoInput = -1
+    }
+    if (livesInput == 0){
+      livesInput = -1 // Ask about this
+    }
+    const payload= {
+      maxammo: ammoInput,
+      style: gameStyle,
+      timedisabled: cooldownInput,
+      maxLives: livesInput,
+      pause: false,
+      date: gameDate,
+      code: gameCode,
+      num_teams: numTeamInput,
+      team_selection: team_selection,
+      name: gameNameInput,
+      host: hostName // Allow changing of host?
+  }
+    //console.log("Editing game",gameNameInput);
+    
     if (this.state.editGame == true){
      this.setState({editGame: false});
+     this.requestPatchGame(payload);
+     this.setState({gameLength: gameLengthInput});
      // Send off changes
      this.refreshAllData();  
     } else{
@@ -404,18 +454,36 @@ export default class GameLobbyScreen extends Component {
   }
       
 
-  startMatch(){
+  startMatch(){ // After Ready lock button is hit, setup and *start match*, may need rnaming
+    this.setState({loading: true});
     const gameID = this.state.gameData.game.id;
-    var gameLength = this.state.gameLength
+    var gameLength = this.state.gameLength;
+    // Formated hh:mm:ss
     if (gameLength == null){
       alert("Please set a game length")
       console.log("Set a gameLength");
       return;
-      gameLength = "00:15:00";
+  
     }
+    gameLength = this.getFormatedTime(gameLength);
     const countDown = 30; // 30 second countdown
     console.log("Starting match",gameLength,gameID,countDown);
+    
     this.requestReadyLock(gameLength,gameID,countDown);
+  }
+
+  beginGame(){
+    console.log("Beginning Game");
+    this.setState({isLocked: false, needColor: false});
+    clearInterval(this.refreshLoop);
+    this.bleManager.sendMessage("s:"+this.state.gameLength); // Also send down countdown??
+    this.props.navigation.navigate("Game",{
+      userData: this.state.userData,
+      gameData: this.state.gameData, // or this.state.gameData // This may return different data than expected on lobby
+      gunData: this.state.gunData,
+      gameLength: this.state.gameLength,
+
+    })
   }
 
 
@@ -514,8 +582,9 @@ export default class GameLobbyScreen extends Component {
             }
             this.setState({loading: false, gameData: gameData});
             if (gameData.game.locked){
-              console.log("LOCKED INTO GAME",gameData);
-              /** Start Timer */
+              console.log("LOCKED INTO GAME",gameData.time_left);
+              this.bleManager.sendMessage("c:"+gameData.time_left); // Also send down countdown??
+              this.setState({isLocked:true,startCountdown: gameData.time_left});
               return;
             }
           } else{
@@ -550,9 +619,16 @@ export default class GameLobbyScreen extends Component {
           gameInfo = JSON.parse(request.response);
           //console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
           //console.log("---------------");
-          let  gameData = this.state.gameData;
+          //let  gameData = this.state.gameData;
                gameData = gameInfo;
-          
+        
+        const ammoInput = (gameData.game.maxammo <=0) ? 0: gameData.game.maxammo;
+        const livesInput = (gameData.game.maxLives <=0) ? 0: gameData.game.maxLives;
+        const cooldownInput = gameData.game.timedisabled;
+        const num_teamInput = gameData.game.num_teams;
+        const gameNameInput = gameData.game.name
+        //console.log("Setting",ammoInput,livesInput,cooldownInput,gameLength)
+        this.setState({ammoInput,gameNameInput, livesInput,cooldownInput,num_teamInput});
             if (gameData.game.style == 'solo'){
               const individuals = gameData.game.individuals;
               var isInlist = individuals.find(player => {
@@ -676,9 +752,9 @@ export default class GameLobbyScreen extends Component {
     request.open('POST', getURL);
     request.setRequestHeader("Content-type","application/json");
     request.send(JSON.stringify(payload));
- }
+  }
 
- requestUnassignPlayer(username,teamID) { // unassigning also does not remove/update team_name/color from stats // Crosscheck
+  requestUnassignPlayer(username,teamID) { // unassigning also does not remove/update team_name/color from stats // Crosscheck
   this.setState({loading: true})
   var getURL = Web_Urls.Host_Url + "/player/team/"+username+"/"+teamID;
   console.log("Sending request to ",getURL)
@@ -702,8 +778,8 @@ export default class GameLobbyScreen extends Component {
     }
     request.open('DELETE', getURL);
     request.send();
-}
-requestRemovePlayer(username,gameID) { // Rewquest specific game data
+  }
+  requestRemovePlayer(username,gameID) { // Rewquest specific game data
   this.setState({loading: true})
   var getURL = Web_Urls.Host_Url + "/player/game/"+username+"/"+gameID;
   console.log("Sending request to ",getURL)
@@ -729,9 +805,9 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
     }
     request.open('DELETE', getURL);
     request.send();
-}
+  }
   
- requestPatchTeam(team,newName) { // Ask about what to do with this now?
+  requestPatchTeam(team,newName) { // Ask about what to do with this now?
   this.setState({loading: true }); // patchLoading
   const teamId = team.id;
   const payload = {name: newName, primaryColor: null, secondaryColor:null, captain:null};
@@ -755,8 +831,33 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
   }
   request.open('PATCH', getURL);
   request.send(JSON.stringify(payload));
- }
+  }
 
+  requestPatchGame(payload) {
+  const gameID = this.state.gameData.game.id;
+  const getURL = Web_Urls.Host_Url + "/change/game/"+gameID; 
+  var request = new XMLHttpRequest();
+    request.onreadystatechange = (e) => {
+      if (request.readyState !== 4) {
+        return;
+      }
+      if (request.status === 200) {
+        gameResponse = JSON.parse(request.response);
+        console.log("Updated Game response",request.response);
+        this.refreshAllData();
+      } else {
+        console.log("Got Error",request);
+        this.setState({hostLoading: false});
+        alert("Something went wrong while creating your game");
+        //this.setState({joinGameError: "Could not connect to server, Please try again later",
+        //              loading: false});     
+      }
+    }
+    console.log("SCreating Game at",getURL); 
+    request.open('PATCH',getURL);
+    request.setRequestHeader("Content-type","application/json");
+    request.send(JSON.stringify(payload)); // Strigify?
+  }
 
  requestReadyLock(gameLength,gameID,countDown){ // Can be array of players
   this.setState({loading: true }); // Different loading types??
@@ -788,7 +889,7 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
   request.open('POST', getURL);
   request.setRequestHeader("Content-type","application/json");
   request.send(JSON.stringify(payload));
-}
+  }
 
 
  /** Rendering functions */
@@ -802,6 +903,33 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
       return 
     }
   }
+
+  renderStarter= () =>{
+    const isLocked = this.state.isLocked;
+    timeLeft = this.state.startCountdown;
+    if (isLocked){ // Todo, change from not to todo    
+    return (
+      <Overlay isVisible = {isLocked}>
+      <View style={{ justifyContent: 'center', alignItems: 'center', flex: 5, padding: 1, backgroundColor: '#212021'}}>
+              <Text style={{fontSize: 30, color: 'white'}}>Game Starting In:</Text>
+              <CountdownCircle
+                seconds={timeLeft}
+                radius={50}
+                borderWidth={10}
+                color="#ff003f"
+                bgColor="#fff"
+                textStyle={{ fontSize: 20 }}
+                onTimeElapsed={() => this.beginGame()}
+            />
+            </View>
+    </Overlay>
+    )
+  } else{
+    return <View></View>
+  }
+}
+
+
 
   renderColorPicker = () =>{
     let editColor = false;
@@ -842,7 +970,7 @@ requestRemovePlayer(username,gameID) { // Rewquest specific game data
     if (formatedSeconds < 10){
       formatedSeconds = "0"+formatedSeconds;
     }
-    const endTime = formattedHours + ":" +formattedMinutes + "." + formatedSeconds;
+    const endTime = formattedHours + ":" +formattedMinutes + ":" + formatedSeconds;
     return endTime
   }
 
@@ -1001,16 +1129,21 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
 
   renderTeamPicker = (isRenderingTeamPlayer,playerTeam,player) => {
     const gameData = this.state.gameData.game;
+    let username = player.player_username
+    if (username == undefined){
+      username = player.username;
+    }
+    
     //console.log("TEamPicker",isRenderingTeamPlayer);
     let teamItems = [];
     let isSolo = false;
     let isOnTeam = false;
    
     if (player.style == 'solo' || playerTeam == 'solo' || gameData.style == 'solo'){ 
-      console.log("Solo game");
+      //console.log("Team Picker: Solo game");
       isSolo = true;
     }else{
-        //console.log("TeamPicker",)
+        isOnTeam = this.checkOnTeam(username);
         if (this.state.teamData == null){ // Find way to get all Teams?
           console.log("Waiting for team Data");
         }else{
@@ -1021,13 +1154,9 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
     }
     // Use populated availible teams instyed??
     //console.log("Picker for player",player,this.state.userData.username);
-    let username = player.player_username
-    if (username == undefined){
-      username = player.username;
-    }
-    isOnTeam = this.checkOnTeam(username);
+    
    //console.log("Got username",isOnTeam)
-    if ((playerTeam == "none" && !isSolo) || !isOnTeam ){ // If no assinged team and not a solo game
+    if ((playerTeam == "none" || !isOnTeam) && !isSolo  ){ // If no assinged team and not a solo game
       if (gameData.team_selection == 'manual') {
         if (this.state.isHost){ // If host (Or captain/neadsName?), then allow Player team assignment from dropdown if player team is none   // If not automatic game      
           return ( // Dont forget to style this
@@ -1057,7 +1186,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           )
         } else{ // If not host
           return(
-             <Text>Wait for assignment</Text>
+             <Text>Waiting...</Text>
           )
         }
       } else{ // If is automatic game
@@ -1113,18 +1242,25 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           username = item.username; 
           isRenderingTeamPlayer = true; 
         }
+           // Check logged in 
+        const loggedIn = this.checkLoggedIn(username);
         const gameStyle = this.state.gameData.game.style;
         //console.log("STYLE",gameStyle);        
         let gameIcon = '';
         let teamInfo = ''
-        let iconColor = '';
+        let iconColor = 'gray';
         //console.log("TEaminfo",teamData);
         if (gameStyle == 'solo'){ // Dont render Team, render color
           gameIcon = 'user';
           teamInfo = 'solo'
+          if(!loggedIn){
+            gameIcon = 'user-x'; 
+            iconColor = 'red';
+          } else{
+            gameIcon = 'user';
+            iconColor = 'green'
+          }
         } else if(gameStyle == 'team'){ // Render Team info, allow host to alter teams
-          // Check logged in 
-          const loggedIn = this.checkLoggedIn(username);
           // check team conflict
           const teamConflict = this.checkTeamConflict(username);
           if (teamConflict){
@@ -1330,7 +1466,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       
         renderGameLengthPicker = () => {
           const gameTime = this.state.gameDate.getTime();
-          var gameLength = this.state.gameLength * 60 * 1000;
+          //var gameLength = this.state.gameLength * 60 * 1000;
           //const potentialEnd = new Date(gameTime + gameLength);
           var newLengthLimit = '';
           if (this.state.lengthLimit == null){
@@ -1342,8 +1478,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
                  <Text style={{ alignSelf: 'center', margin: 3, fontSize:15}}>Timer:</Text>
                </View>
                  <NumericInput 
-                   value={this.state.gameLength} 
-                   onChange={gameLength => this.setState({gameLength})} 
+                   value={this.state.gameLengthInput} 
+                   onChange={gameLengthInput => this.setState({gameLengthInput})} 
                    onLimitReached={(isMax,msg) => console.log(isMax,msg)}
                    totalWidth={Container_Width} 
                    totalHeight={Container_Height} 
@@ -1392,12 +1528,7 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           </View>
           )
         } else {
-          var ammoText = gameData.maxammo
-          if (gameData.maxammo <=0){
-              ammoText = "Infinite"
-          } else{
-            ammoText = gameData.maxammo
-          }
+
           var gameMode = gameData.style
           if (gameData.style =='solo'){
             gameMode = "Free For All"
@@ -1410,53 +1541,63 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           const playerList = this.state.playerList;
           const playerCount = playerList.length; // if playerList is undefined/null?
           const gameIcon = (gameMode == "Free For All") ? 'user' : 'users';
-          const liveCount = (gameData.liveCount <= 0) ? 'Infinite Lives' : gameData.maxLives + ' Lives'
+          const ammoText = (gameData.maxammo <= 0) ? '∞' : gameData.maxammo
+          const liveCount = (gameData.maxLives <= 0) ? '∞' : gameData.maxLives
           let cardTitle = '';
-         if (this.state.editGame == false){
-          iconName = "square-edit-outline"
+        if (this.state.isHost){
+          //console.log("Adding edit buttons",this.state.isHost);
+          if (this.state.editGame == false){
+            iconName = "square-edit-outline"
+            cardTitle = <View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+                              <Icon raised 
+                                onPress={()=> this.editGame(gameData)} 
+                                name = {iconName} 
+                                size = {15}  
+                                containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
+                                color= "black"  
+                                type = 'material-community'/> 
+                                <Text style = {{ color: 'black', marginTop: -35, alignSelf: 'center', fontSize: 20, fontWeight: 'bold'}}> {gameData.name} </Text>
+                          
+                          </View>
+           } else{
+            iconName = "check";
+            //console.log("GameName",this.state.gameNameInput)
+            const cardTitle = (<View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
+                              <Input style={{ height: 15}}
+                                value = {this.state.gameNameInput}
+                                autoCompleteType = 'off'
+                                placeholder='Game Name'
+                                returnKeyType='done'                     
+                                onChangeText={gameNameInput => this.setState({gameNameInput})} 
+                              />
+                              <Icon raised 
+                                onPress={()=> this.editGame(gameData)} 
+                                name = {iconName} 
+                                size = {15}  
+                                containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
+                                color= "black"  
+                                type = 'material-community'/> 
+                          </View>);
+            return (
+              <View>
+              <Card title={cardTitle} titleStyle= {{ fontSize: 20}}>
+                  {this.renderLivesNumberPicker()}
+                  {this.renderAmmoSelection()}
+                  {this.renderCooldownNumberPicker()}
+                  {this.renderGameLengthPicker()}
+               </Card>
+            </View>
+            )
+           }
+        } else{
           cardTitle = <View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
-                            <Icon raised 
-                              onPress={()=> this.editGame(gameData)} 
-                              name = {iconName} 
-                              size = {15}  
-                              containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
-                              color= "black"  
-                              type = 'material-community'/> 
-                              <Text style = {{ color: 'black', marginTop: -35, alignSelf: 'center', fontSize: 20, fontWeight: 'bold'}}> {gameData.name} </Text>
-                        
-                        </View>
-         } else{
-          iconName = "check";
-          const cardTitle = (<View style = {{flex: 1, marginBottom: 10, flexDirection: 'column', backgroundColor: '#FFFFFF', justifyContent: 'center'}} >
-                            <Input style={{ height: 15}}
-                              value = {this.state.gameNameInput}
-                              autoCompleteType = 'off'
-                              placeholder='Game Name'
-                              returnKeyType='done'                     
-                              onChangeText={gameNameInput => this.setState({gameNameInput})} 
-                            />
-                            <Icon raised 
-                              onPress={()=> this.editGame(gameData)} 
-                              name = {iconName} 
-                              size = {15}  
-                              containerStyle={{flex: 1, alignSelf: 'flex-end'}} 
-                              color= "black"  
-                              type = 'material-community'/> 
-                        </View>);
-          return (
-            <View>
-            <Card title={cardTitle} titleStyle= {{ fontSize: 20}}>
-                {this.renderLivesNumberPicker()}
-                {this.renderAmmoSelection()}
-                {this.renderCooldownNumberPicker()}
-                {this.renderGameLengthPicker()}
-             </Card>
-          </View>
+                        <Text style = {{ color: 'black', marginTop: 5, alignSelf: 'center', fontSize: 20, fontWeight: 'bold'}}> {gameData.name} </Text>
+                      </View>
 
-          )
-         }
+        }
+         
          let formattedGameLength ='';
-         if (this.state.gameLength == null){
+         if (this.state.gameLength != null){
            formattedGameLength = this.getFormatedTime(this.state.gameLength);
          }else{
            formattedGameLength = "Not Set";
@@ -1636,9 +1777,16 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
       }
 
       renderReadyLockButton = () => {
-        return(
-        <Button loading = {this.state.loading} disabled = {this.state.loading} style={{marginBottom: 10}}title= "Start Match" onPress={() => this.startMatch()}/>
-        )
+        if (this.state.isHost){// && and validate other things like teams/logged in users
+          return(
+            <Button loading = {this.state.loading} disabled = {this.state.loading} style={{marginBottom: 10, paddingTop: 10}}title= "Start Match" onPress={() => this.startMatch()}/>
+            )
+        } else{
+          return (
+            <View></View> // Ready Button?
+          )
+        }
+        
       }
       render() {
         flatListData = [{id: 0, name:"GameData", key: 1}];
@@ -1646,8 +1794,8 @@ assignTeam = (teamIndex,player) =>{ // Assign a player to a team, send request, 
           <ThemeProvider {...this.props}  theme={LaserTheme}>
            <CustomHeader {...this.props} refresh = {this.refresh} leaveLobby = {this.leaveLobby} headerText= "Game Lobby" headerType = "lobby" />
            <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Lobby"></BluetoothManager>
-            {/*this.renderJoinError()*/}
-          {/*<Button onPress = { () =>this.bleManager.sendMessage("Hello world")}></Button>*/}
+           {this.renderStarter()}
+          
              {this.renderColorPicker()}       
             <FlatList
               listKey = "main"
