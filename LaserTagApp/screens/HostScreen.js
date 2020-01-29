@@ -455,9 +455,9 @@ export default class HostScreen extends Component {
     )
   }
   populateAvailibleTeams = () => { // Use (FINISH) this if we want dropdown list to shrink with selection
-    //console.log("Populatinga vailible teams");
+    console.log("Populatinga vailible teams");
     const all_teams = this.state.all_teams;
-    //console.log(all_teams)
+    console.log(all_teams)
     all_teams.push({color: "", name:"New Team", color_name: '', team_id:null});
     let availibleTeams = all_teams.map( (team) =>{
       if (team.name != ""){
@@ -499,6 +499,7 @@ export default class HostScreen extends Component {
   
   isAlreadySelected = (teamName) =>{
     const teamList = this.state.teamList;
+    // If teamName != new Team
     const found = teamList.some(team => team.name === teamName); // Search by team_id if needed? (null?)
     return found;
   }
@@ -513,7 +514,8 @@ export default class HostScreen extends Component {
       // Put Toast?
       return false;
     }
-    newTeaminfo = {name: selectedTeam.name, color:selectedTeam.color, team_id: selectedTeam.team_id, color_name: selectedTeam.color_name}
+    console.log("selceted TEam",selectedTeam)
+    newTeaminfo = {name: selectedTeam.name, color:selectedTeam.color, team_id: selectedTeam.id, color_name: selectedTeam.color_name}
     // Setting eeach one individually since bulk seting does not seem to work
     teamList[itemIndex].name = newTeaminfo.name;
     teamList[itemIndex].color = newTeaminfo.color;

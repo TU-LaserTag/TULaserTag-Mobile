@@ -71,7 +71,8 @@ export default class GameLobbyScreen extends Component {
       curColor: 'green',
       isLocked: false,
       startCountdown: null,
-      gameLength: null,
+      gameLength: null, // # of minutes set by user (Will be changed to timestamp-esque)
+      game_length: null, // # of seconds returned by checkup
       gameNameInput: null,
       
       today: new Date(),
@@ -481,7 +482,7 @@ export default class GameLobbyScreen extends Component {
       userData: this.state.userData,
       gameData: this.state.gameData, // or this.state.gameData // This may return different data than expected on lobby
       gunData: this.state.gunData,
-      gameLength: this.state.gameLength,
+      gameLength: this.state.game_length, // Transfer num seconds to game start
 
     })
   }
@@ -582,9 +583,9 @@ export default class GameLobbyScreen extends Component {
             }
             this.setState({loading: false, gameData: gameData});
             if (gameData.game.locked){
-              console.log("LOCKED INTO GAME",gameData.time_left);
-              this.bleManager.sendMessage("c:"+gameData.time_left); // Also send down countdown??
-              this.setState({isLocked:true,startCountdown: gameData.time_left});
+              console.log("LOCKED INTO GAME",gameData.game_length);
+              this.bleManager.sendMessage("c:"+gameData.game_length); // Also send down countdown??
+              this.setState({isLocked:true,game_length: gameData.game_length});
               return;
             }
           } else{

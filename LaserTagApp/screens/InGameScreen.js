@@ -33,13 +33,15 @@ export default class InGameScreen extends Component {
       loggedIn: true,
       gameError: '',
       gameClock: null,
-      gameLength:  null,
+      gameLength:  null, // Num of seconds returned from checkup
       gameOver: false,
       endGameStats: null,
       winners: null,
+      myHits: [],
+      myKills: [],
     }
     this.renderSoloLeaderBoard = this.renderSoloLeaderBoard.bind(this);
-
+    this.renderKillData = this.renderKillData.bind(this);
   }
   
   componentDidMount(){
@@ -64,8 +66,10 @@ export default class InGameScreen extends Component {
     // Set refreshInterval interval
     if (gameLength != null){
       console.log('gameLength',gameLength);
-      // Convert from here?
+      this.setState({gameClock: gameLength}); // Should be sconds in game
       // set gamelentgh
+    } else{
+      console.log("no gamelength recieved"); // Alert user and pull from server
     }
     this.refresh();
 
@@ -146,7 +150,7 @@ export default class InGameScreen extends Component {
      * fire?
      */
     if (this.isEmptyObject(gameData)){
-      console.log("May have error getting data");
+      //console.log("May have error getting data");
     } else{
       const gameID = this.state.gameData.game.id;
       this.requestGameInfo(gameID); // Stores game data into gameData
@@ -245,24 +249,26 @@ leaveGame = () =>{
   keyExtractor = (item, index) =>index.toString()
 
 showGameOver = (gameOverData) =>{
-  alert("Game Finished");
+  //alert("Game Finished");
   console.log("GameoverData",gameOverData)
   this.bleManager.sendMessage("f:")
   clearInterval(this.gameClockLoop)
   clearInterval(this.gameDataRefreshLoop);
-  this.setState({gameOver:true})
+  this.setState({gameOver:true, gameClock: 0});
 }
 
   fireGun = () =>{
     console.log("pew pew");
+    gameClock = this.state.gameClock;
     this.bleManager.sendMessage("s:"+1) // Ammo lift
     // Gather Needed info here first and pass it along
     const gameData = this.state.gameData;
     const gameMode = gameData.game.style;
     const username = this.state.userData.username;
     const gameID = gameData.game.id;
-    const timestamp = new Date().getTime(); /** todo:  ASK WHAt time format is needed */
-    const rounds_fired = 5; // Get Info from Gun...
+    const timestamp = gameClock; /** todo:  ASK WHAt time format is needed */
+    console.log("Fired At",timestamp);
+    const rounds_fired = 1; // Get Info from Gun...
     this.requestFireGun(gameMode,username,gameID,timestamp,rounds_fired);
   }
   
@@ -310,27 +316,32 @@ showGameOver = (gameOverData) =>{
   requestGameInfo(gameID){
     this.setState({loading: true,                
     })
+
     var getURL = Web_Urls.Host_Url + "/game/info/"+gameID // For somereason not returning evertyih
-    console.log("Sending request to ",getURL)
+    console.log("Sending request to ",getURL);
     var request = new XMLHttpRequest();
       request.onreadystatechange = (e) => {
         if (request.readyState !== 4) {
           return;
         }
         if (request.status === 200) {
-          const gameData = JSON.parse(request.response);
+          var gameInfo = JSON.parse(request.response);
           //console.log("Got GAMEINFO:",gameInfo); // Gets strange on team games
            
-             const gameInfo = gameData.game;
-             const startTime = gameInfo.starttime;
-             const endTime = gameInfo.endtime;
-             //if (this.state.gameClock == null){ /** Should It update every time? */
-               //const secsTillEnd = this.getSecondsUntilEndTime(startTime,endTime);
-               const timeLeft = this.getSecondsLeft(endTime);
-               //console.log("Setting game clock",timeLeft);
+             gameInfo = gameInfo.game;
+             //console.log("Stat Game",this.state.gameData.game);
+             var newGameState = this.state.gameData;
+             newGameState.game = gameInfo;
+             //console.log("New game state",newGameState)
+            this.setState({gameData: newGameState});
+            const endTime = gameInfo.endtime;
+            const timeLeft = this.getSecondsLeft(endTime);
+            //console.log("calculated seconds left:...",timeLeft);
+            if (this.state.gameClock == null){ /** Should It update every time? */
+              console.log("Setting game clock",timeLeft);
               this.setState({gameClock: timeLeft});
-             //}
-             //console.log("ZGame in",gameInfo.name)
+             }
+            
             if (gameInfo.style == 'solo'){ // If solo match
               const players = gameInfo.stats;
               var isInlist = players.find(player => {
@@ -344,7 +355,6 @@ showGameOver = (gameOverData) =>{
                 console.warn("You have been removed from this match");
                 this.setState({loggedIn: false});
               }  
-              this.setState({loading: false, gameData});
             } else{
               //Refreshes team data, Array gets un sorted however TODO: prevent array shuffling after naming a team
               const playerList = gameInfo.stats;
@@ -352,8 +362,6 @@ showGameOver = (gameOverData) =>{
               //console.log("TeamData",teamData)
               this.setState({teamData,playerList});
             }
-            //console.log("Setting state")
-            this.setState({loading: false, gameData: gameData});
           
         } else {
           console.log("Erroe when Sdearching for game data",request)
@@ -408,7 +416,13 @@ showGameOver = (gameOverData) =>{
         if (request.status === 200) { // Error 500, Cannot read property 'split' of null db.js:989:52 (when calling gameover on a game with no endTime)
           gameInfo = JSON.parse(request.response);
           console.log("Rounds fired recieved",gameInfo); // Gets strange on team game
-          this.setState({loading: false});
+          const recentHits = gameInfo.hitlist;
+          var myHits = this.state.myHits;
+          
+          //console.log(this.state.myHits)
+          myHits.concat(recentHits); // Check for duplicates?
+          this.setState({loading: false, myHits});
+          this.refresh();
           // Format and store hitDictionary to be loaded ad proper stats. also ask why solo game does not have kills array in stats...
         } else {
           console.log("Erroe when Sdearching for game data",request)
@@ -554,13 +568,16 @@ showGameOver = (gameOverData) =>{
       const flatListData = [{id: 0, name:"GameData", key: 1}];
       if (gameData.style == 'solo'){ // Place Leaderboard herec // {this.renderLeaderboard(gameData)}
       //console.log("Rendering solo lB",gameData)
-        return (<FlatList
+        return (<View> 
+          <Text style= {{fontSize: 20}}>Leader Board:</Text>
+          <FlatList
           listKey = "LeaderBoard"
           keyExtractor={this.DataKeyExtractor}
           data={flatListData}
           renderItem={this.renderSoloLeaderBoard}
           extraData={this.state}
         />
+        </View>
         )
       } else{
         const teamData = gameData.teams;
@@ -606,7 +623,7 @@ showGameOver = (gameOverData) =>{
     const userData = this.state.userData;
     let myStats = null;
     if (userData == null){
-      console.log("User Data null")
+      //console.log("User Data null")
     }else{
       //console.log("Getting stats",gameStats,this.state.userData)
       myStats = this.getSelfStatsFromUsername(gameStats,this.state.userData.username);
@@ -661,12 +678,13 @@ showGameOver = (gameOverData) =>{
     //console.log("AllStats",gameData.stats); /** TODO: Get a better way to render this data list... new API request? */
     //return (<View></View>);;
     //killed":[{"id":4,"player_username":"Dr. You","killer_stats_id":12}]}
-    const myStats = gameData.game.stats;
+    const myStats = gameData.game.stats; // Do not use kill stats
     //console.log("myStats",gameData);
-
-    if (myStats == null){
+    const myKills = this.state.myKills;
+    const myHits = this.state.myHits;
+    if (myKills == null && myHits == null){
       return(
-        <Card title="Loading Kill Feed" containerStyle={{borderWidth:1,}}>
+        <Card title="Loading Stats" containerStyle={{borderWidth:1,}}>
             <ActivityIndicator size="large" color="#61578b"
               style = {{
                   paddingTop: 30,
@@ -675,55 +693,61 @@ showGameOver = (gameOverData) =>{
               }} />
           </Card>
       )
-    } else{
-      let kills = [];
+    } else{// Only gets kill stats after a fire, will need to self populate hits
       if (gameData.game.style == 'solo'){
-        kills = [] /** ASK how to get kill stats  populagte after calling fire? */
+        // Se things up here: only 
       } else{
-        kills = myStats.killed;
+       //
       }
 
       //console.log("Kills",kills)
-      if (kills.length == 0){
+      if (myKills.length == 0 && myHits.length == 0){
         return (
           <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
-          <Text>No Kills</Text>
+          <Text>No Data</Text>
+          </Card>
+        )
+      } else{
+        return(
+          <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
+          <FlatList
+            listKey = "Kills"
+            keyExtractor={this.DataKeyExtractor}
+            data={flatListData}
+            renderItem={this.renderKillData}
+            extraData={this.state}
+          />
           </Card>
         )
       }
-      return(
-        <Card title="Kill Feed" titleStyle={{fontSize: 25}} containerStyle={{ margin: 4, marginTop: 15, borderWidth:1, borderBottomStartRadius: 10, borderBottomEndRadius: 10}}>
-        <FlatList
-          listKey = "Kills"
-          keyExtractor={this.DataKeyExtractor}
-          data={flatListData}
-          renderItem={this.renderKill}
-          extraData={this.state}
-        />
-        </Card>
-      )
     }
   }
 
-  renderKill({item}){
-    console.log("Rendering kill",item);
+  renderKillData({item}){
+    //console.log("Rendering kill",this.state);
+    myHits = this.state.myHits;
+    myKills = this.state.myKills;
+
     const timeAgo = "3 mins ago";
     return(
       <ListItem
       key="header"
       containerStyle = {{
-        backgroundColor: '#ae936c',
+        backgroundColor: '#FEFEFE',
         margin: 0
       }}
-      title="Kills"
-      subtitle = {timeAgo}
+      title="Hit"
+      titleStyle = {{ fontSize: 10}}
+      rightTitle = {timeAgo}
+      rightTitleStyle = {{fontSize: 10}}
       bottomDivider
     />
   )
   }
 
   renderGameDataCard = () =>{ /* More to come!!! */
-    const gameData = this.state.gameData;
+    let gameData = this.state.gameData;
+    //console.log("Render GameDataCard",gameData)
     if (gameData == null || gameData == undefined){
       return( 
       <View>
@@ -763,25 +787,21 @@ showGameOver = (gameOverData) =>{
   }
 
   renderWinner = ({item}) =>{
-    console.log("Renderin gwinere",item)
+    //console.log("Renderin gwinere",item)
     // Get Info on winner depending on team or username
-    return( /** Or just have the same thing from leaderrboard */
-    <ListItem
-          style= {{borderColor: "black", borderWidth: 1}}
-          key = {item}
-          title={item}
-          titleStyle = {{fontSize: 14,color: 'black'}}
-          containerStyle = {{
-            backgroundColor: "#EEEEEE"
-          }}
-         subtitle="Winner" // Chage?
-          subtitleStyle = {{
-            fontSize: 9,
-            color: "black"
-            
-          }}
-          leftIcon={{ name: "user", type: 'feather', color: 'black'} /*Could be Avatar as well? or team/League indicator */}
-        />
+    // Set icon info, bind this data to state
+    // Get Game Sty
+    // Get Player/Team color
+    // GEt specific stats?
+    const winnerPoints = 0; 
+    const winnerColor = 'red';
+    return( /** Or just have the same thing from leaderrboard Make backgrouyd color dynamic to winner color?*/
+      <View style ={{backgroundColor:'white'}} flexDirection= 'row'>
+        <Icon name= "user" type= 'feather' color= {winnerColor}></Icon>
+        <Text style={{color: 'black', fontWeight: 'bold', fontSize: 14, alignSelf: 'center'}} >{item} </Text>
+        <Text style = {{color: 'black', fontSize: 15, alignSelf: 'center'}}> </Text>
+        <Text style = {{color: 'black', fontSize: 15, alignSelf: 'center', fontWeight: '200'}} >{ winnerPoints}</Text>
+      </View>
     )
   }
 
@@ -811,10 +831,15 @@ showGameOver = (gameOverData) =>{
       const gameWinners = this.state.winners;
       console.log("Gameover visible",gameOver)
       return (
-        <Overlay isVisible = {gameOver}>
+        <Overlay isVisible = {gameOver}
+                  //windowBackgroundColor="red"
+                  //overlayBackgroundColor="blue"
+                  //width="auto"
+                  //height="auto"
+        >
           <View style={{ justifyContent: 'center', alignItems: 'center', flex: 5, padding: 1, backgroundColor: '#212021'}}>
-              <Text style={{fontSize: 32, color: 'white'}}>Game Over</Text>
-              <Text>Winners:</Text>
+              <Text style={{fontSize: 30, color: 'white'}}>Game Over</Text>
+              <Text style={{fontSize: 25, color: 'white'}}>Winner:</Text>
               {this.renderGameWinners(gameWinners)}
             </View>
          </Overlay>
@@ -829,7 +854,7 @@ showGameOver = (gameOverData) =>{
     var gameData = this.state.gameData;
     var gameTime = null;
     if (gameData == null || this.isEmptyObject(gameData)){
-        console.log("Game Data EMPTY",)
+        //console.log("Game Data EMPTY",)
         gameData = {};
     } else{
       //console.log("SETTIng game Data");
@@ -844,11 +869,11 @@ showGameOver = (gameOverData) =>{
       <ThemeProvider {...this.props}  theme={LaserTheme}>
         <CustomHeader {...this.props} refresh = {this.refresh} leaveGame = {this.leaveGame} headerText= "Match" headerType = "game" />
         <BluetoothManager ref={bleManager => {this.bleManager = bleManager}} {...this.props} getGunData = {this.getGunData} screen= "Game"></BluetoothManager>
-        {this.renderEndGame()}
         {this.rendergameTimer(gameTime)}
         {this.renderGameHeader(gameData)}
         {this.renderTeamHeaders(gameData)}
-       
+        {this.renderEndGame()}
+
         <FlatList
           listKey = "main"
           keyExtractor={this.DataKeyExtractor}

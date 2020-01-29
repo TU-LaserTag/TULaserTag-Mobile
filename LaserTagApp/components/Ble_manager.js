@@ -707,7 +707,7 @@ export default class BluetoothManager extends Component {
             backgroundColor: 'gray',
             textAlign: 'center'
         }} onPress={() => this.startScan() }>
-          {this.state.scanning ? 'Scanning...' : 'Not Scaning'}
+          {this.state.scanning ? this.renderSpinner() : '' }
         </Text>
         <Input
           placeholder='Enter Gun ID Manually'
