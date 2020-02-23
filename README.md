@@ -1,6 +1,34 @@
 # TULaserTag-Mobile
 Laser tag Mobile application for Taylor University
 
+Documentation:
+
+# How To get started:
+1. Download and install globally Expo cli
+'npm install -g expo cli'
+
+2. Clone this repository to wherever you like
+'git clone {{Repo URL}} '
+
+3. Run NPM install inside the Main Directory
+'npm install'
+
+4. If you are running the project on IOS, Go into the ios/ directory and run Pod install
+'pod install'
+(If you are running with pods locally, find the directory where Pods is installed and use that as a prefix)
+
+5. Go back into the main director (cd ..) and run expo start
+'Expo start'
+
+6. If you are on Ios, connect a device via usb to the mac and open up the workspace in the ios/ directory with xCode
+
+7. Once xCode is started, Press the play button on the top left corner (make sure it recognizes device).
+   Lots of warnings will appear, ignore them. If errors appear that prevent installation, Google them or contact me.
+ 
+8. Once the app is installed properly, it will open automatically (make sure expo is still running in background or else it will freeze)
+
+9. Play around! App code documentation is incoming
+
 Shared and useful information:
 
 Bluetooth Gun Service UUID: 
