@@ -29,6 +29,15 @@ Documentation:
 
 9. Play around! App code documentation is incoming
 
+# Troubleshooting
+
+- The app times out on IOS (can not connect to expo / metro server)
+   This means that the mac and the mobile device are not running on the same network. In order to remedy this temporarily, change the preference on the mac to share it's network connection over USB and try again. (it will ask you to verify the app again, make sure to be unplugged from the mac before doing so or else it will time out)
+   
+ - The app will not build on IOS (unfixable error)
+   There are two xCode files, a project and a workspace, the project should be the one you open, not the workspace.
+
+
 Shared and useful information:
 
 Bluetooth Gun Service UUID: 
