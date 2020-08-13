@@ -3,7 +3,7 @@ Laser tag Mobile application for Taylor University
 
 Documentation:
 
-# How To get started:
+## How To get started:
 1. Download and install globally Expo cli
 `npm install -g expo cli`
 
@@ -29,16 +29,16 @@ Documentation:
 
 9. Play around! Full documentation amd android implementation is on pause until project is picked up again.
 
-# Troubleshooting
+## Troubleshooting
 
 - The app times out on IOS (can not connect to expo / metro server)
    This means that the mac and the mobile device are not running on the same network. In order to remedy this temporarily, change the preference on the mac to share it's network connection over USB and try again. (it will ask you to verify the app again, make sure to be unplugged from the mac before doing so or else it will time out)
    
  - The app will not build on IOS (unfixable error)
    There are two xCode files, a project and a workspace, the project should be the one you open, not the workspace.
+ - Note that the repository was impoperly setup and the pods came installed, taking up a lot of space. Feel free to add ./Ios and ./Android to the .gitignore
 
-
-Shared and useful information:
+##Shared and useful information:
 
 Bluetooth Gun Service UUID: 
 206AC814-ED0B-4204-BD82-E3A0B3BBECC2
