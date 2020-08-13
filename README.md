@@ -5,20 +5,20 @@ Documentation:
 
 # How To get started:
 1. Download and install globally Expo cli
-'npm install -g expo cli'
+`npm install -g expo cli`
 
 2. Clone this repository to wherever you like
-'git clone {{Repo URL}} '
+`git clone {{Repo URL}} `
 
 3. Run NPM install inside the Main Directory
-'npm install'
+`npm install`
 
 4. If you are running the project on IOS, Go into the ios/ directory and run Pod install
-'pod install'
+`pod install`
 (If you are running with pods locally, find the directory where Pods is installed and use that as a prefix)
 
 5. Go back into the main director (cd ..) and run expo start
-'Expo start'
+`Expo start`
 
 6. If you are on Ios, connect a device via usb to the mac and open up the workspace in the ios/ directory with xCode
 
@@ -27,7 +27,7 @@ Documentation:
  
 8. Once the app is installed properly, it will open automatically (make sure expo is still running in background or else it will freeze)
 
-9. Play around! App code documentation is incoming
+9. Play around! Full documentation amd android implementation is on pause until project is picked up again.
 
 # Troubleshooting
 
@@ -52,7 +52,7 @@ BB950764-A597-4E20-8613-E43BF9D1330C
 Testing arduino MAC:
 24:6f:28:a8:3f:cc
 
-Arduino BT ID:
+Testing Gun Arduino BT ID:
 24:6f:28:a8:3f:ce
 
 ID UUID?:
