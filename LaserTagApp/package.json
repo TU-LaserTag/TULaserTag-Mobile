@@ -21,7 +21,7 @@
     "convert-string": "^0.1.0",
     "dns.js": "^1.0.1",
     "domain-browser": "^1.1.1",
-    "expo": "^36.0.1",
+    "expo": "^48.0.0",
     "expo-cli": "^3.11.5",
     "expo-font": "~8.0.0",
     "expokit": "^36.0.0",
