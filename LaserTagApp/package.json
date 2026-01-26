@@ -22,7 +22,7 @@
     "dns.js": "^1.0.1",
     "domain-browser": "^1.1.1",
     "expo": "^36.0.1",
-    "expo-cli": "^3.11.5",
+    "expo-cli": "^6.3.12",
     "expo-font": "~8.0.0",
     "expokit": "^36.0.0",
     "https-browserify": "0.0.1",
